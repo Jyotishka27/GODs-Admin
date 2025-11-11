@@ -1,17 +1,33 @@
-document.getElementById("loginForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-    
-    const username = document.getElementById("username").value.trim();
-    const password = document.getElementById("password").value.trim();
+// scripts/login.js
+// Firebase v12 modular syntax — works with your CDN setup in index.html
 
-    // Hardcoded credentials (change as needed)
-    const ADMIN_USER = "admin";
-    const ADMIN_PASS = "gods";
+import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+import { getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 
-    if (username === ADMIN_USER && password === ADMIN_PASS) {
-        localStorage.setItem("isAdmin", "true");
-        window.location.href = "./admin.html"; // redirect
-    } else {
-        document.getElementById("errorMsg").classList.remove("hidden");
-    }
+// Get Firebase App instance (initialized in index.html)
+const app = getApp();
+const auth = getAuth(app);
+
+const loginForm = document.getElementById("loginForm");
+const errorMsg = document.getElementById("errorMsg");
+
+loginForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = document.getElementById("username").value.trim();
+  const password = document.getElementById("password").value.trim();
+
+  // Hide any previous error
+  errorMsg.classList.add("hidden");
+
+  try {
+    // Firebase sign-in
+    await signInWithEmailAndPassword(auth, email, password);
+    // Redirect to admin panel
+    window.location.href = "./admin.html";
+  } catch (error) {
+    console.error("Login failed:", error.code, error.message);
+    errorMsg.textContent = "Invalid credentials or user not found.";
+    errorMsg.classList.remove("hidden");
+  }
 });
