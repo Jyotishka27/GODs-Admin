@@ -1,17 +1,9 @@
 // scripts/admin-app.js
-// Admin panel scripts (vanilla JS module)
-// - Expects an admin HTML with elements described below (IDs).
-// - Uses Firebase CDN v12.5 imports (ES modules).
-// - Paste into /scripts/ and include as <script type="module" src="/scripts/admin-app.js"></script>
+// Admin panel script (no login handling here — login is done on another page)
+// - Expects the admin HTML you provided (IDs: filterDate, filterCourt, filterStatus, rows, wlRows, exportCsv, clearAll, refreshBtn, etc.)
+// - Uses Firebase client SDK (Firestore). Make sure Firestore rules allow this admin client to read/write, or use server-proxy approach for production.
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  getIdTokenResult
-} from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
 import {
   getFirestore,
   collection,
@@ -19,14 +11,16 @@ import {
   where,
   getDocs,
   doc,
-  updateDoc,
+  deleteDoc,
   addDoc,
+  updateDoc,
   serverTimestamp,
+  writeBatch,
   runTransaction
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-functions.js";
 
-/* ========= CONFIG: update if needed ========= */
+/* ---------- CONFIG: update if needed ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
   authDomain: "gods-turf.firebaseapp.com",
@@ -35,409 +29,431 @@ const firebaseConfig = {
   messagingSenderId: "46992157689",
   appId: "1:46992157689:web:b547bc847c7a0331bb2b28"
 };
-const SITE_JSON = "/data/site.json"; // path to your site.json used on public site
-/* ============================================ */
+const SITE_JSON = "/data/site.json";
+/* --------------------------------------------- */
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
 const db = getFirestore(app);
-const functions = getFunctions(app); // used if you deploy callable functions
+let functions = null;
+try { functions = getFunctions(app); } catch(e){ functions = null; console.warn("Functions not available", e); }
 
-/* ========= DOM references (must exist in admin HTML) =========
-Required DOM elements (IDs):
-- admin-email, admin-pass, admin-login, admin-logout, admin-user
-- admin-app (container for admin UI)
-- admin-date (input[type=date]) - optional, defaults to today
-- admin-refresh (button)
-- admin-bookings (container)
-- admin-wishlists (container)
-- admin-status (for toasts/messages)
-If your admin HTML uses different IDs, update the selectors below.
-=============================================== */
-const el = id => document.getElementById(id);
+/* ---------- DOM helpers ---------- */
+const $id = id => document.getElementById(id);
+const $ = (sel, el=document) => el.querySelector(sel);
+function el(tag, cls=''){ const e = document.createElement(tag); if(cls) e.className = cls; return e; }
 
-const emailEl = el("admin-email");
-const passEl = el("admin-pass");
-const loginBtn = el("admin-login");
-const logoutBtn = el("admin-logout");
-const userEl = el("admin-user");
-const adminAppEl = el("admin-app");
-const dateEl = el("admin-date");
-const refreshBtn = el("admin-refresh");
-const bookingsContainer = el("admin-bookings");
-const wishlistsContainer = el("admin-wishlists");
-const statusEl = el("admin-status");
+/* ---------- UI elements (your admin.html IDs) ---------- */
+const filterDate = $id("filterDate");
+const filterCourt = $id("filterCourt");
+const filterStatus = $id("filterStatus");
+const exportCsvBtn = $id("exportCsv");
+const clearAllBtn = $id("clearAll");
+const refreshBtn = $id("refreshBtn");
+const rowsTbody = $id("rows");
+const wlRowsTbody = $id("wlRows");
+const tabBookings = $id("tabBookings");
+const tabWaitlist = $id("tabWaitlist");
+const tabNotifications = $id("tabNotifications");
+const bookingsSection = $id("bookingsSection");
+const waitlistSection = $id("waitlistSection");
+const notificationsSection = $id("notificationsSection");
+// optional notif area
+const adminNotifs = $id("adminNotifs");
 
-/* ========= small helpers ========= */
-function fmtDateISO(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+/* ---------- Site config runtime ---------- */
+let SITE_CFG = null;
+async function loadSiteCfg(){
+  try{
+    const r = await fetch(SITE_JSON, { cache: "no-store" });
+    SITE_CFG = await r.json();
+    populateCourtsDropdown();
+  }catch(e){
+    console.warn("Failed to load site.json", e);
+    SITE_CFG = null;
+  }
+}
+function populateCourtsDropdown(){
+  if(!filterCourt || !SITE_CFG || !Array.isArray(SITE_CFG.courts)) return;
+  filterCourt.innerHTML = `<option value="">All courts</option>`;
+  SITE_CFG.courts.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.id;
+    opt.textContent = c.label || c.id;
+    filterCourt.appendChild(opt);
+  });
+}
+
+/* ---------- util ---------- */
+function fmtDateISO(d = new Date()){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), dd=String(d.getDate()).padStart(2,"0");
   return `${y}-${m}-${dd}`;
 }
-function toast(msg, error = false, timeout = 5000) {
-  if (!statusEl) {
-    alert(msg);
-    return;
-  }
-  statusEl.textContent = msg;
-  statusEl.style.color = error ? "#991b1b" : "#064e3b";
-  clearTimeout(statusEl._t);
-  statusEl._t = setTimeout(() => { statusEl.textContent = ""; }, timeout);
+function escapeHtml(s){ if(s===undefined||s===null) return ""; return String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function timeFromISO(iso){
+  try { return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+  catch(e){ return iso || ""; }
 }
-function elCreate(tag, cls = "") { const e = document.createElement(tag); if (cls) e.className = cls; return e; }
-
-/* ========= runtime site config (site.json) ========= */
-let SITE_CFG = null;
-let COURT_META = {};     // built from site.json: id -> { type, label, resourceId, units }
-let PRICE_BY_COURT = {}; // id -> price
-
-async function loadSiteCfg() {
-  try {
-    const r = await fetch(SITE_JSON, { cache: "no-store" });
-    if (!r.ok) throw new Error("site.json load failed: " + r.status);
-    SITE_CFG = await r.json();
-    // build maps
-    COURT_META = {};
-    PRICE_BY_COURT = {};
-    (SITE_CFG.courts || []).forEach(c=>{
-      // prefer explicit type, fallback to units heuristic
-      const type = c.type || ((c.units && c.units >= 2) ? "full" : "half");
-      COURT_META[c.id] = { type, label: c.label || c.id, resourceId: c.resourceId || null, units: c.units || 1 };
-      PRICE_BY_COURT[c.id] = c.basePrice || 0;
-    });
-    toast("Site config loaded");
-  } catch (err) {
-    console.error("loadSiteCfg err", err);
-    toast("Failed to load site.json", true);
+function toast(msg, err=false){
+  // minimal toast: append to adminNotifs if available
+  if(adminNotifs){
+    const p = el("div","p-1 text-sm");
+    p.textContent = msg;
+    p.style.color = err ? "#991b1b" : "#064e3b";
+    adminNotifs.prepend(p);
+    setTimeout(()=> p.remove(), 8000);
+  } else {
+    console.log(msg);
   }
 }
 
-/* ========= AUTH flow ========= */
-loginBtn?.addEventListener("click", async () => {
-  const email = emailEl?.value?.trim();
-  const pass = passEl?.value || "";
-  if (!email || !pass) { toast("Enter email & password", true); return; }
+/* ---------- Firestore reads ---------- */
+async function fetchBookings({ date, court, status } = {}) {
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    // onAuthStateChanged will handle UI change
-  } catch (err) {
-    console.error("login err", err);
-    toast("Login failed: " + (err.message || err), true);
-  }
-});
-
-logoutBtn?.addEventListener("click", async () => {
-  try {
-    await signOut(auth);
-  } catch (err) {
-    console.error("logout err", err);
-  }
-});
-
-onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    // signed out
-    userEl && (userEl.textContent = "");
-    userEl && userEl.classList.add("hidden");
-    logoutBtn && logoutBtn.classList.add("hidden");
-    adminAppEl && adminAppEl.classList.add("hidden");
-    toast("Signed out");
-    return;
-  }
-  // user signed in; check custom claims for admin
-  try {
-    const tokenRes = await getIdTokenResult(user, /* forceRefresh */ true);
-    const isAdmin = !!(tokenRes?.claims && tokenRes.claims.admin === true);
-    if (!isAdmin) {
-      toast("Not an admin. Contact owner.", true);
-      await signOut(auth);
-      return;
-    }
-    userEl && (userEl.textContent = `Signed in as ${user.email}`);
-    userEl && userEl.classList.remove("hidden");
-    logoutBtn && logoutBtn.classList.remove("hidden");
-    adminAppEl && adminAppEl.classList.remove("hidden");
-    // initialize admin UI
-    await loadSiteCfg();
-    initializeAdminUI();
-    await loadAndRenderForDate(dateEl?.value || fmtDateISO());
-  } catch (err) {
-    console.error("auth check err", err);
-    toast("Auth error", true);
-  }
-});
-
-/* ========= Admin UI init ========= */
-function initializeAdminUI() {
-  // set date input default if absent
-  if (dateEl && !dateEl.value) dateEl.value = fmtDateISO();
-
-  refreshBtn?.addEventListener("click", async () => {
-    await loadAndRenderForDate(dateEl.value || fmtDateISO());
-  });
-
-  dateEl?.addEventListener("change", async () => {
-    await loadAndRenderForDate(dateEl.value || fmtDateISO());
-  });
-}
-
-/* ========= Firestore helpers (admin) ========= */
-async function fetchBookingsForDateAdmin(dateISO) {
-  try {
-    const q = query(collection(db, "bookings"), where("date", "==", dateISO));
+    let q = collection(db, "bookings");
+    const filters = [];
+    if (date) filters.push(where("date", "==", date));
+    if (court) filters.push(where("court", "==", court));
+    if (status) filters.push(where("status", "==", status));
+    if (filters.length) q = query(...([collection(db,"bookings")].concat(filters)));
+    // if no filters, we still query collection
     const snap = await getDocs(q);
     const items = [];
     snap.forEach(d => {
       const data = d.data(); data._id = d.id;
       items.push(data);
     });
-    // sort by slot then time (slot ids like "06:00-07:00" will sort lexicographically OK)
-    items.sort((a,b) => (a.slotId||"").localeCompare(b.slotId||"") || (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
+    // sort by slotId (lexicographic) then createdAt
+    items.sort((a,b)=> (a.slotId||'').localeCompare(b.slotId||'') || (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
     return items;
   } catch (err) {
-    console.error("fetchBookingsForDateAdmin err", err);
-    toast("Failed to load bookings", true);
+    console.error("fetchBookings err", err);
+    toast("Failed to fetch bookings", true);
     return [];
   }
 }
 
-async function fetchWishlistsForDateAdmin(dateISO) {
+async function fetchWishlists({ date } = {}) {
   try {
-    const q = query(collection(db, "wishlists"), where("date", "==", dateISO));
+    let q = collection(db, "wishlists");
+    if (date) q = query(collection(db,"wishlists"), where("date", "==", date));
     const snap = await getDocs(q);
     const items = [];
-    snap.forEach(d => {
-      const data = d.data(); data._id = d.id;
-      items.push(data);
-    });
-    // earliest first
-    items.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
+    snap.forEach(d => { const dt = d.data(); dt._id = d.id; items.push(dt); });
+    items.sort((a,b)=> (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
     return items;
   } catch (err) {
-    console.error("fetchWishlistsForDateAdmin err", err);
-    toast("Failed to load wishlists", true);
+    console.error("fetchWishlists err", err);
+    toast("Failed to fetch wishlists", true);
     return [];
   }
 }
 
-/* ========= Render helpers ========= */
-function clearContainers() {
-  if (bookingsContainer) bookingsContainer.innerHTML = "";
-  if (wishlistsContainer) wishlistsContainer.innerHTML = "";
-}
-
-function createActionButton(text, cls = "", onClick) {
-  const btn = elCreate("button", cls);
-  btn.textContent = text;
-  btn.addEventListener("click", onClick);
-  return btn;
-}
-
-/* ========= Action implementations ========= */
-
-async function cancelBooking(bookingId) {
-  try {
-    const adminEmail = auth.currentUser?.email || "admin";
-    const ref = doc(db, "bookings", bookingId);
-    await updateDoc(ref, { status: "cancelled", cancelledAt: serverTimestamp(), cancelledBy: adminEmail });
-    toast("Booking cancelled");
-    await loadAndRenderForDate(dateEl?.value || fmtDateISO());
-    // optional: after cancellation, you may want to notify earliest wishlist (admin action)
-  } catch (err) {
-    console.error("cancelBooking err", err);
-    toast("Cancel failed: " + (err.message || err), true);
-  }
-}
-
-/**
- * convertWishlistToBooking
- * - Preferred path: call a Cloud Function named 'convertWishlistToBooking' (deployable)
- * - Fallback path: attempt a client-side create with a transaction (not atomic across multiple clients
- *   but OK for low-concurrency admin actions). The function will attempt callable first.
- */
-async function convertWishlistToBooking(wishlistId) {
-  // try callable cloud function first
-  try {
-    const callable = httpsCallable(functions, "convertWishlistToBooking");
-    const res = await callable({ wishlistId });
-    const bookingId = res.data?.bookingId;
-    toast("Converted to booking: " + (bookingId || "OK"));
-    await loadAndRenderForDate(dateEl?.value || fmtDateISO());
-    return;
-  } catch (fnErr) {
-    console.warn("Callable function failed or not deployed:", fnErr);
-    toast("Cloud function unavailable — attempting client-side conversion (admin only).", true);
-  }
-
-  // fallback: client-side
-  try {
-    // read wishlist
-    const wlRef = doc(db, "wishlists", wishlistId);
-    const wlSnap = await getDocs( query(collection(db,"wishlists"), where("__name__", "==", wishlistId)) );
-    // easier: use getDocs above just to confirm but we need the doc ref; instead we'll get the doc
-    const wlDoc = await (async ()=>{
-      const d = await wlRef.get?.(); // some environments may not support .get; use getDoc if available
-      return d;
-    })();
-    // to keep it robust, we'll re-fetch wishlist by id via getDocs query (since getDoc import not used)
-    // Simpler approach: use getDocs with a query on __name__ as we already used - but Firestore doesn't allow __name__ in client queries easily.
-    // Let's instead attempt to read using getDocs on collection filtered by id field 'preferredBookingId' if stored.
-    // To avoid complexity, we will not implement full client fallback here; instruct admin to deploy Cloud Function if needed.
-    toast("Client-side conversion fallback is not implemented in this build. Please deploy convertWishlistToBooking Cloud Function.", true);
-  } catch (err) {
-    console.error("client-side convert err", err);
-    toast("Conversion failed: " + (err.message || err), true);
-  }
-}
-
-/* ========= Notify via WhatsApp (open new window) ========= */
-function notifyWishlistUser(wl) {
-  try {
-    if (!wl || !wl.phone) { toast("No phone available to notify", true); return; }
-    const phonePlain = wl.phone.replace(/[^+\d]/g, "").replace(/^\+/, "");
-    const msg = `Hi ${wl.userName || "there"}, a slot is available at GODs Turf on ${wl.date} for ${wl.slotLabel}. Reply if you'd like to confirm.`;
-    const url = `https://wa.me/${phonePlain}?text=${encodeURIComponent(msg)}`;
-    window.open(url, "_blank");
-  } catch (err) {
-    console.error("notifyWishlistUser err", err);
-    toast("Notify failed", true);
-  }
-}
-
-/* ========= Render bookings & wishlists ========= */
-function renderBookings(bookings) {
-  if (!bookingsContainer) return;
-  bookingsContainer.innerHTML = "";
-
-  if (!bookings.length) {
-    bookingsContainer.appendChild(elCreate("div", "text-sm text-gray-500")).textContent = "No bookings for selected date.";
+/* ---------- Renderers ---------- */
+function renderBookingsTable(bookings) {
+  if(!rowsTbody) return;
+  rowsTbody.innerHTML = "";
+  if(!bookings.length){
+    const tr = el("tr"); tr.innerHTML = `<td class="px-3 py-2 text-sm text-gray-500" colspan="9">No bookings</td>`;
+    rowsTbody.appendChild(tr);
     return;
   }
 
   bookings.forEach(b => {
-    const row = elCreate("div", "admin-row border p-3 mb-2 rounded");
-    // left: info
-    const info = elCreate("div", "mb-2");
-    info.innerHTML = `<div><strong>${b.slotLabel || b.slotId}</strong> · ${b.date}</div>
-                      <div class="text-xs text-gray-600">Court: ${b.court} · Status: ${b.status || "pending"} · Amount: ${b.amount || "-"}</div>`;
-    row.appendChild(info);
+    const tr = el("tr","border-b");
+    const statusBadge = (b.status === 'confirmed')
+      ? `<span class="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">Confirmed</span>`
+      : `<span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">${escapeHtml(b.status || 'pending')}</span>`;
 
-    // meta lines
-    const meta = elCreate("div", "text-sm text-gray-700 mb-2");
-    meta.textContent = `Name: ${b.userName || "-"} · Phone: ${b.phone || "-"}`;
-    row.appendChild(meta);
+    tr.innerHTML = `
+      <td class="px-3 py-2 font-mono text-xs">${escapeHtml(b._id)}</td>
+      <td class="px-3 py-2">${statusBadge}</td>
+      <td class="px-3 py-2">${escapeHtml(b.court || b.courtId || '')}</td>
+      <td class="px-3 py-2">${escapeHtml(b.date || b.dateISO || '')}</td>
+      <td class="px-3 py-2">${escapeHtml(timeFromISO(b.startISO || b.start))}</td>
+      <td class="px-3 py-2">${escapeHtml(b.userName || b.name || '')}<br><span class="text-gray-500 text-xs">${escapeHtml(b.phone || '')}</span></td>
+      <td class="px-3 py-2">₹${Number(b.amount || b.price || 0).toLocaleString('en-IN')}</td>
+      <td class="px-3 py-2">${escapeHtml(b.notes || '')}</td>
+      <td class="px-3 py-2 space-x-2">
+        <button data-del="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>
+        <button data-convert="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-sm">Mark Cancelled</button>
+        <button data-wa="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-sm">WhatsApp</button>
+      </td>
+    `;
+    rowsTbody.appendChild(tr);
+  });
 
-    // actions
-    const actions = elCreate("div", "flex gap-2");
-    // Cancel
-    const cancelBtn = createActionButton("Cancel", "btn btn-sm btn-danger", async () => {
-      if (!confirm("Cancel this booking?")) return;
-      await cancelBooking(b._id);
+  // bind actions
+  rowsTbody.querySelectorAll("button[data-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=> {
+      const id = btn.dataset.del;
+      if(!confirm(`Delete booking ${id}?`)) return;
+      await deleteBooking(id);
+      await refreshCurrentView();
     });
-    actions.appendChild(cancelBtn);
-
-    // Optional: quick notify wishlist users (open WA)
-    const notifyBtn = createActionButton("Notify Wishlist", "btn btn-sm", async () => {
-      // open WhatsApp for earliest wishlist for same slot/date
-      const wl = await findEarliestWishlist(b.date, b.slotId);
-      if (!wl) { toast("No wishlist entries found"); return; }
-      notifyWishlistUser(wl);
+  });
+  rowsTbody.querySelectorAll("button[data-convert]").forEach(btn=>{
+    btn.addEventListener("click", async ()=> {
+      const id = btn.dataset.convert;
+      if(!confirm(`Mark booking ${id} as cancelled?`)) return;
+      await cancelBooking(id);
+      await refreshCurrentView();
     });
-    actions.appendChild(notifyBtn);
-
-    row.appendChild(actions);
-    bookingsContainer.appendChild(row);
+  });
+  rowsTbody.querySelectorAll("button[data-wa]").forEach(btn=>{
+    btn.addEventListener("click", ()=> {
+      const id = btn.dataset.wa;
+      const b = bookings.find(x => x._id === id);
+      if(!b || !b.phone){ toast("Phone not available", true); return; }
+      const phonePlain = String(b.phone).replace(/^\+/, '');
+      const msg = `Booking ID: ${b._id}\nDate: ${b.date}\nTime: ${timeFromISO(b.startISO || b.start)}\nStatus: ${b.status||'pending'}`;
+      window.open(`https://wa.me/${phonePlain}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
   });
 }
 
-function renderWishlists(wishlists) {
-  if (!wishlistsContainer) return;
-  wishlistsContainer.innerHTML = "";
-
-  if (!wishlists.length) {
-    wishlistsContainer.appendChild(elCreate("div", "text-sm text-gray-500")).textContent = "No wishlists for selected date.";
+function renderWaitlistTable(wls) {
+  if(!wlRowsTbody) return;
+  wlRowsTbody.innerHTML = "";
+  if(!wls.length){
+    const tr = el("tr"); tr.innerHTML = `<td class="px-3 py-2 text-sm text-gray-500" colspan="6">No waitlist entries</td>`;
+    wlRowsTbody.appendChild(tr);
     return;
   }
 
-  wishlists.forEach(w => {
-    const row = elCreate("div", "admin-row border p-3 mb-2 rounded");
-    const info = elCreate("div", "mb-2");
-    info.innerHTML = `<div><strong>${w.slotLabel || w.slotId}</strong> · ${w.date}</div>
-                      <div class="text-xs text-gray-600">Court: ${w.court} · Status: ${w.status || "open"}</div>`;
-    row.appendChild(info);
+  wls.forEach(w => {
+    const tr = el("tr","border-b");
+    tr.innerHTML = `
+      <td class="px-3 py-2 font-mono text-xs">${escapeHtml(w._id)}</td>
+      <td class="px-3 py-2">${escapeHtml(w.court || w.courtId || '')}</td>
+      <td class="px-3 py-2">${escapeHtml(w.date || '')}</td>
+      <td class="px-3 py-2">${escapeHtml(timeFromISO(w.startISO || w.start))}</td>
+      <td class="px-3 py-2">${escapeHtml(w.userName || w.name || '')}<br><span class="text-gray-500 text-xs">${escapeHtml(w.phone||'')}</span></td>
+      <td class="px-3 py-2 space-x-2">
+        <button data-wl-del="${escapeHtml(w._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>
+        <button data-wl-convert="${escapeHtml(w._id)}" class="px-2 py-1 rounded border text-sm">Convert → Booking</button>
+        <button data-wl-wa="${escapeHtml(w._id)}" class="px-2 py-1 rounded border text-sm">WhatsApp</button>
+      </td>
+    `;
+    wlRowsTbody.appendChild(tr);
+  });
 
-    const meta = elCreate("div", "text-sm text-gray-700 mb-2");
-    meta.textContent = `Name: ${w.userName || "-"} · Phone: ${w.phone || "-"} · Added: ${w.createdAt?.toDate ? w.createdAt.toDate().toLocaleString() : "-"}`;
-    row.appendChild(meta);
-
-    const actions = elCreate("div", "flex gap-2");
-    // Convert (call Cloud Function)
-    const convertBtn = createActionButton("Convert → Booking", "btn btn-sm btn-primary", async () => {
-      if (!confirm("Convert this wishlist entry into a booking? This will attempt an atomic conversion on the server.")) return;
-      await convertWishlistToBooking(w._id);
+  // bind
+  wlRowsTbody.querySelectorAll("button[data-wl-del]").forEach(btn=>{
+    btn.addEventListener("click", async ()=> {
+      const id = btn.dataset.wlDel;
+      if(!confirm(`Delete waitlist ${id}?`)) return;
+      await deleteWishlist(id);
+      await refreshCurrentView();
     });
-    actions.appendChild(convertBtn);
-
-    // Notify (WhatsApp)
-    const notifyBtn = createActionButton("Notify", "btn btn-sm", () => notifyWishlistUser(w));
-    actions.appendChild(notifyBtn);
-
-    row.appendChild(actions);
-    wishlistsContainer.appendChild(row);
+  });
+  wlRowsTbody.querySelectorAll("button[data-wl-convert]").forEach(btn=>{
+    btn.addEventListener("click", async ()=> {
+      const id = btn.dataset.wlConvert;
+      if(!confirm(`Convert wishlist ${id} to booking?`)) return;
+      await convertWishlistToBooking(id);
+      await refreshCurrentView();
+    });
+  });
+  wlRowsTbody.querySelectorAll("button[data-wl-wa]").forEach(btn=>{
+    btn.addEventListener("click", ()=> {
+      const id = btn.dataset.wlWa;
+      const w = wls.find(x => x._id === id);
+      if(!w || !w.phone){ toast("Phone not available", true); return; }
+      const phonePlain = String(w.phone).replace(/^\+/, '');
+      const msg = `Waitlist: ${w.slotLabel || w.slotId}\nDate: ${w.date}`;
+      window.open(`https://wa.me/${phonePlain}?text=${encodeURIComponent(msg)}`, '_blank');
+    });
   });
 }
 
-/* ========= utility: find earliest wishlist for a slot & date ========= */
-async function findEarliestWishlist(date, slotId) {
+/* ---------- Actions (Firestore writes) ---------- */
+async function deleteBooking(id){
   try {
-    const q = query(collection(db, "wishlists"), where("date", "==", date), where("slotId", "==", slotId), where("status", "==", "open"));
+    await deleteDoc(doc(db, "bookings", id));
+    toast(`Deleted booking ${id}`);
+  } catch (err){
+    console.error("deleteBooking err", err);
+    toast("Delete failed", true);
+  }
+}
+async function cancelBooking(id){
+  try{
+    const ref = doc(db, "bookings", id);
+    await updateDoc(ref, { status: "cancelled", cancelledAt: serverTimestamp() });
+    toast(`Cancelled booking ${id}`);
+  }catch(err){ console.error(err); toast("Cancel failed", true); }
+}
+async function deleteAllBookings(dateOnly){
+  if(!confirm("Delete ALL bookings? This is destructive. Proceed?")) return;
+  try {
+    let q = collection(db, "bookings");
+    if (dateOnly) q = query(collection(db,"bookings"), where("date", "==", dateOnly));
     const snap = await getDocs(q);
-    const items = [];
-    snap.forEach(d => {
-      const dt = d.data(); dt._id = d.id;
-      items.push(dt);
-    });
-    if (!items.length) return null;
-    items.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
-    return items[0];
-  } catch (err) {
-    console.error("findEarliestWishlist err", err);
-    return null;
-  }
+    const batch = writeBatch(db);
+    snap.forEach(s => batch.delete(s.ref));
+    await batch.commit();
+    toast(`Deleted ${snap.size} bookings`);
+  } catch (err) { console.error(err); toast("Delete all failed", true); }
 }
-
-/* ========= load & render for date ========= */
-async function loadAndRenderForDate(dateISO) {
-  if (!dateISO) dateISO = fmtDateISO();
-  clearContainers();
-  toast("Loading bookings & wishlists...");
+async function exportBookingsCsv(date){
   try {
-    const [bookings, wishlists] = await Promise.all([
-      fetchBookingsForDateAdmin(dateISO),
-      fetchWishlistsForDateAdmin(dateISO)
-    ]);
-    renderBookings(bookings);
-    renderWishlists(wishlists);
-    toast("Loaded");
+    let q = collection(db, "bookings");
+    if (date) q = query(collection(db,"bookings"), where("date","==", date));
+    const snap = await getDocs(q);
+    const rows = [];
+    snap.forEach(d => {
+      const data = d.data();
+      rows.push({
+        id: d.id,
+        status: data.status || '',
+        court: data.court || data.courtId || '',
+        slotId: data.slotId || '',
+        slotLabel: data.slotLabel || '',
+        date: data.date || '',
+        startISO: data.startISO || '',
+        endISO: data.endISO || '',
+        name: data.userName || data.name || '',
+        phone: data.phone || '',
+        amount: data.amount || data.price || '',
+        notes: data.notes || ''
+      });
+    });
+    const csvHead = Object.keys(rows[0]||{ id:1 }).join(",");
+    const csvRows = rows.map(r => Object.values(r).map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(","));
+    const csv = [csvHead].concat(csvRows).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = el("a"); a.href = url; a.download = `bookings-${date||'all'}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    toast("CSV exported");
+  } catch (err) { console.error(err); toast("Export failed", true); }
+}
+
+/* ---------- Convert wishlist -> booking (call cloud function if available; fallback to transaction) ---------- */
+async function convertWishlistToBooking(wishlistId){
+  // try callable first
+  if(functions){
+    try{
+      const fn = httpsCallable(functions, "convertWishlistToBooking");
+      const res = await fn({ wishlistId });
+      toast("Converted wishlist → booking: " + (res.data?.bookingId || "ok"));
+      return;
+    }catch(fnErr){
+      console.warn("Callable convert function failed:", fnErr);
+      toast("Cloud function unavailable — trying client-side conversion", true);
+    }
+  }
+
+  // fallback: client-side transaction (best-effort)
+  try {
+    const wlRef = doc(db, "wishlists", wishlistId);
+    await runTransaction(db, async (t)=>{
+      const wlSnap = await t.get(wlRef);
+      if(!wlSnap.exists()) throw new Error("Wishlist not found");
+      const wl = wlSnap.data();
+      // check conflicts for the date+slot
+      const conflictQ = query(collection(db,"bookings"), where("date","==", wl.date), where("slotId","==", wl.slotId));
+      const conflictSnap = await getDocs(conflictQ);
+      let conflictExists = false;
+      conflictSnap.forEach(d => {
+        const dd = d.data();
+        if(dd.status !== 'cancelled') conflictExists = true;
+      });
+      if(conflictExists) throw new Error("Slot already booked");
+      // create booking doc and update wishlist
+      const bookingRef = doc(collection(db,"bookings"));
+      t.set(bookingRef, {
+        userName: wl.userName || wl.name || "Converted",
+        phone: wl.phone || null,
+        notes: wl.notes || null,
+        coupon: wl.coupon || null,
+        court: wl.court,
+        slotId: wl.slotId,
+        slotLabel: wl.slotLabel,
+        date: wl.date,
+        amount: wl.amount || 0,
+        status: "confirmed",
+        createdAt: serverTimestamp(),
+        convertedFromWishlist: wishlistId
+      });
+      t.update(wlRef, { status: "converted", convertedToBookingId: bookingRef.id, convertedAt: serverTimestamp() });
+    });
+    toast("Converted wishlist to booking");
   } catch (err) {
-    console.error("loadAndRenderForDate err", err);
-    toast("Load failed", true);
+    console.error("convert fallback error", err);
+    toast("Conversion failed: " + (err.message || err), true);
   }
 }
 
-/* ========= Bootstrapping: expose some helpers for console debugging ========= */
-window.__GODS_ADMIN = {
-  loadSiteCfg,
-  loadAndRenderForDate,
-  fetchBookingsForDateAdmin,
-  fetchWishlistsForDateAdmin,
-  convertWishlistToBooking,
-  cancelBooking,
-  notifyWishlistUser
-};
+/* ---------- Delete wishlist ---------- */
+async function deleteWishlist(id){
+  try {
+    await deleteDoc(doc(db, "wishlists", id));
+    toast("Deleted waitlist item");
+  } catch (err) { console.error(err); toast("Delete waitlist failed", true); }
+}
 
-// If user is already signed in & admin, onAuthStateChanged will run. Otherwise show login UI by default.
-toast("Admin scripts loaded. Sign in to continue.");
+/* ---------- Refresh & wiring ---------- */
+async function refreshCurrentView(){
+  const date = filterDate?.value || fmtDateISO();
+  const court = filterCourt?.value || "";
+  const status = filterStatus?.value || "";
+  // bookings
+  const bookings = await fetchBookings({ date, court: court || undefined, status: status || undefined });
+  renderBookingsTable(bookings);
+  // wishlists (fetch for date)
+  const wishlist = await fetchWishlists({ date });
+  renderWaitlistTable(wishlist);
+}
 
-/* End of admin-app.js */
+/* ---------- Event wiring ---------- */
+function wireUI(){
+  // default date to today if empty
+  if(filterDate && !filterDate.value) filterDate.value = fmtDateISO();
+
+  if(filterDate) filterDate.addEventListener("change", refreshCurrentView);
+  if(filterCourt) filterCourt.addEventListener("change", refreshCurrentView);
+  if(filterStatus) filterStatus.addEventListener("change", refreshCurrentView);
+
+  exportCsvBtn?.addEventListener("click", ()=> exportBookingsCsv(filterDate?.value || undefined));
+  clearAllBtn?.addEventListener("click", ()=> {
+    if(!confirm("Delete ALL bookings (for selected date if date chosen)? This is irreversible.")) return;
+    deleteAllBookings(filterDate?.value || undefined).then(()=> refreshCurrentView());
+  });
+  refreshBtn?.addEventListener("click", refreshCurrentView);
+
+  // tabs
+  tabBookings?.addEventListener("click", ()=> {
+    bookingsSection.classList.remove("hidden");
+    waitlistSection.classList.add("hidden");
+    notificationsSection.classList.add("hidden");
+    tabBookings.classList.add("bg-emerald-600","text-white");
+    tabWaitlist.classList.remove("bg-emerald-600","text-white");
+    tabNotifications.classList.remove("bg-emerald-600","text-white");
+  });
+  tabWaitlist?.addEventListener("click", ()=> {
+    bookingsSection.classList.add("hidden");
+    waitlistSection.classList.remove("hidden");
+    notificationsSection.classList.add("hidden");
+    tabBookings.classList.remove("bg-emerald-600","text-white");
+    tabWaitlist.classList.add("bg-emerald-600","text-white");
+    tabNotifications.classList.remove("bg-emerald-600","text-white");
+  });
+  tabNotifications?.addEventListener("click", ()=> {
+    bookingsSection.classList.add("hidden");
+    waitlistSection.classList.add("hidden");
+    notificationsSection.classList.remove("hidden");
+    tabBookings.classList.remove("bg-emerald-600","text-white");
+    tabWaitlist.classList.remove("bg-emerald-600","text-white");
+    tabNotifications.classList.add("bg-emerald-600","text-white");
+  });
+}
+
+/* ---------- boot ---------- */
+async function boot(){
+  await loadSiteCfg();
+  wireUI();
+  await refreshCurrentView();
+  toast("Admin panel loaded");
+}
+
+window.addEventListener("load", boot);
