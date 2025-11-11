@@ -2,26 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin Login - GODs</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Login – GODs Turf</title>
   <link rel="stylesheet" href="./styles/styles.css" />
 </head>
 <body class="flex justify-center items-center h-screen bg-gray-100">
   <div class="bg-white shadow-lg rounded-xl p-6 w-96">
     <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
 
-    <form id="loginForm" class="space-y-4" aria-label="Admin login form">
-      <label for="username" class="sr-only">Email / Username</label>
+    <form id="loginForm" class="space-y-4">
       <input
         type="text"
         id="username"
-        placeholder="Email (or username for fallback)"
+        placeholder="Email"
         class="w-full border p-2 rounded"
         required
         autocomplete="username"
       />
-
-      <label for="password" class="sr-only">Password</label>
       <input
         type="password"
         id="password"
@@ -30,28 +27,67 @@
         required
         autocomplete="current-password"
       />
-
-      <button type="submit" class="w-full bg-green-600 text-white p-2 rounded">
+      <button
+        type="submit"
+        class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
+      >
         Login
       </button>
     </form>
 
-    <p id="errorMsg" class="text-red-500 text-sm mt-2 text-center hidden" role="alert">
+    <p
+      id="errorMsg"
+      class="text-red-500 text-sm mt-2 text-center hidden"
+      role="alert"
+    >
       Invalid credentials!
     </p>
   </div>
 
-  <!-- Firebase SDKs (compat build for easier migration from older code) -->
-  <!-- Update the version numbers if you prefer a newer compat version -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- ✅ Firebase v12 CDN Setup -->
+  <script type="module">
+    // Import the Firebase SDKs you need
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
 
-  <!-- Your Firebase initializer: create this file as scripts/firebase-init.js -->
-  <!-- It must export/attach firebaseAuth and firebaseFirestore on window for other scripts -->
-  <script src="./scripts/firebase-init.js"></script>
+    // ✅ Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
+      authDomain: "gods-turf.firebaseapp.com",
+      projectId: "gods-turf",
+      storageBucket: "gods-turf.firebasestorage.app",
+      messagingSenderId: "46992157689",
+      appId: "1:46992157689:web:e8289a4a32ee8bc2bb2b28",
+      measurementId: "G-NNV2S3D6V3"
+    };
 
-  <!-- Login script (expects firebase-init to have run) -->
-  <script src="./scripts/login.js"></script>
+    // ✅ Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const analytics = getAnalytics(app);
+
+    // ✅ Login form handler
+    const loginForm = document.getElementById("loginForm");
+    const errorMsg = document.getElementById("errorMsg");
+
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      errorMsg.classList.add("hidden");
+
+      const email = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        // Successful login → redirect to admin page
+        window.location.href = "./admin.html";
+      } catch (error) {
+        console.error("Login failed:", error);
+        errorMsg.textContent = "Invalid credentials or user not found.";
+        errorMsg.classList.remove("hidden");
+      }
+    });
+  </script>
 </body>
 </html>
