@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Login – GODs Turf</title>
 
-  <!-- ✅ Tailwind + your site-wide stylesheet -->
+  <!-- ✅ Tailwind + site-wide CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="./styles/style.css" />
 </head>
@@ -61,7 +61,6 @@
       getAuth,
       signInWithEmailAndPassword,
       onAuthStateChanged,
-      getIdTokenResult,
       setPersistence,
       browserLocalPersistence,
       browserSessionPersistence
@@ -116,24 +115,14 @@
       updateState();
     });
 
-    // ✅ Only redirect if admin claim is true
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return;
-      try {
-        const token = await getIdTokenResult(user);
-        if (token?.claims?.admin === true) {
-          window.location.href = './admin.html';
-        } else {
-          await auth.signOut();
-          showError('Signed-in user is not an admin.');
-        }
-      } catch (e) {
-        console.error(e);
-        await auth.signOut();
-        showError('Auth check failed. Please sign in again.');
+    // ✅ Auto-redirect if already logged in (no admin check)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = './admin.html';
       }
     });
 
+    // ✅ Login form
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       clearError();
@@ -142,6 +131,7 @@
       try {
         await setPersistence(auth, remember.checked ? browserLocalPersistence : browserSessionPersistence);
         await signInWithEmailAndPassword(auth, emailEl.value.trim(), pwEl.value.trim());
+        window.location.href = './admin.html'; // redirect after login
       } catch (err) {
         console.error('Login failed:', err);
         let msg = 'Login failed — check credentials.';
