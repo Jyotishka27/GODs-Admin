@@ -11,9 +11,6 @@
       --bg2: #071033;    /* darker */
       --accent: #16a34a; /* green */
       --muted: #94a3b8;  /* slate-400 */
-      --card: rgba(255,255,255,0.06);
-      --glass: rgba(255,255,255,0.04);
-      --glass-strong: rgba(255,255,255,0.06);
     }
     html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
     body{
@@ -29,113 +26,36 @@
       -moz-osx-font-smoothing:grayscale;
     }
 
-    /* Container */
-    .card {
-      width:100%;
-      max-width:420px;
-      border-radius:16px;
-      padding:28px;
-      box-sizing:border-box;
+    .card { width:100%; max-width:420px; border-radius:16px; padding:28px; box-sizing:border-box;
       background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
       box-shadow: 0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
       backdrop-filter: blur(8px) saturate(1.05);
       border: 1px solid rgba(255,255,255,0.04);
-      transition: transform 220ms cubic-bezier(.2,.9,.3,1);
     }
-    .card:focus-within{ transform: translateY(-4px) scale(1.002); }
-
-    .brand {
-      display:flex;
-      align-items:center;
-      gap:12px;
-      margin-bottom:18px;
-    }
-    .brand .logo {
-      width:48px;height:48px;border-radius:10px;
-      background:linear-gradient(135deg,#10b981,#059669);
-      display:flex;align-items:center;justify-content:center;
-      color:white;font-weight:700;font-size:18px;box-shadow:0 4px 14px rgba(2,6,23,0.5);
-    }
-    .brand h1{ margin:0;font-size:18px;font-weight:700; letter-spacing:0.2px; color: #e6eef8;}
-    .brand p{ margin:0; font-size:12px; color:var(--muted); }
-
+    .brand { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .brand .logo { width:48px;height:48px;border-radius:10px; background:linear-gradient(135deg,#10b981,#059669); display:flex;align-items:center;justify-content:center; color:white;font-weight:700;font-size:18px; }
     h2 { margin: 0 0 8px 0; font-size:20px; color:#f8fafc }
     .lead { margin:0 0 18px 0; color:var(--muted); font-size:13px; }
-
     form { display:flex; flex-direction:column; gap:12px; }
 
-    .input {
-      display:flex;
-      align-items:center;
-      gap:10px;
-      background: rgba(255,255,255,0.02);
-      border-radius:10px;
-      padding:8px 12px;
-      border:1px solid rgba(255,255,255,0.03);
-      transition: box-shadow 180ms, border-color 180ms, background 180ms;
-    }
-    .input:focus-within{
-      box-shadow: 0 6px 18px rgba(3,7,18,0.55);
-      border-color: rgba(22,163,74,0.9);
-      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
-    }
-
+    .input { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.02); border-radius:10px; padding:8px 12px; border:1px solid rgba(255,255,255,0.03);}
+    .input:focus-within{ box-shadow: 0 6px 18px rgba(3,7,18,0.55); border-color: rgba(22,163,74,0.9); }
     .input svg{ flex:0 0 18px; opacity:0.9; color:var(--muted); }
-    input[type="text"], input[type="password"], input[type="email"]{
-      border:0;background:transparent;color:inherit;outline:none;font-size:14px;width:100%;
-      padding:8px 0;
-    }
+    input[type="text"], input[type="password"], input[type="email"]{ border:0;background:transparent;color:inherit;outline:none;font-size:14px;width:100%; padding:8px 0; }
 
     .row-between{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:4px; }
     .muted { color:var(--muted); font-size:13px; }
 
-    .actions {
-      display:flex;
-      gap:12px;
-      align-items:center;
-      margin-top:6px;
-    }
-    .btn {
-      flex:1;
-      padding:10px 14px;
-      border-radius:10px;
-      font-weight:600;
-      border:0; cursor:pointer;
-      transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
-      background: linear-gradient(90deg,var(--accent), #059669);
-      color:white;
-      box-shadow: 0 10px 30px rgba(4,120,87,0.15);
-    }
-    .btn:active{ transform: translateY(1px) }
-    .btn[disabled]{
-      opacity:0.6; cursor:not-allowed; box-shadow:none; transform:none;
-      background: linear-gradient(90deg,#1f2937,#111827);
-    }
-
-    .ghost {
-      background: transparent; border:1px solid rgba(255,255,255,0.06); color: #e6eef8;
-      padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer;
-    }
-
+    .actions { display:flex; gap:12px; align-items:center; margin-top:6px; }
+    .btn { flex:1; padding:10px 14px; border-radius:10px; font-weight:600; border:0; cursor:pointer;
+      background: linear-gradient(90deg,var(--accent), #059669); color:white; box-shadow: 0 10px 30px rgba(4,120,87,0.15); }
+    .btn[disabled]{ opacity:0.6; cursor:not-allowed; box-shadow:none; background: linear-gradient(90deg,#1f2937,#111827); }
+    .ghost { background: transparent; border:1px solid rgba(255,255,255,0.06); color: #e6eef8; padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer; }
     .hint { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; }
-
-    .error {
-      background: linear-gradient(90deg, rgba(244,63,94,0.08), rgba(244,63,94,0.03));
-      color:#fecaca; border:1px solid rgba(244,63,94,0.18);
-      padding:8px 12px; border-radius:8px; font-size:13px; display:none;
-    }
+    .error { background: linear-gradient(90deg, rgba(244,63,94,0.08), rgba(244,63,94,0.03)); color:#fecaca; border:1px solid rgba(244,63,94,0.18); padding:8px 12px; border-radius:8px; font-size:13px; display:none; }
     .error.show { display:block; }
-
-    .small { font-size:13px; color:var(--muted); }
-    .link { color:#d1fae5; text-decoration:none; font-weight:600; font-size:13px; }
-    .link:hover { text-decoration:underline; }
-
     .pw-toggle { background:transparent;border:0;color:var(--muted); cursor:pointer; font-weight:600; padding:4px; }
-
-    @media (max-width:480px){
-      .card{ padding:20px; border-radius:12px; }
-      .brand h1{ font-size:16px; }
-    }
+    @media (max-width:480px){ .card{ padding:20px; border-radius:12px; } }
   </style>
 </head>
 <body>
@@ -152,10 +72,8 @@
     <p class="lead">Sign in to manage bookings, courts and waitlists.</p>
 
     <form id="loginForm" novalidate autocomplete="on" aria-describedby="formHint">
-      <!-- accessible error banner -->
       <div id="errorBanner" class="error" role="alert" aria-live="assertive"></div>
 
-      <!-- email -->
       <label class="input" for="username">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11zM4.5 6A.5.5 0 0 0 4 6.5v.2l7 4.2 7-4.2v-.2a.5.5 0 0 0-.5-.5h-15z"></path>
@@ -163,7 +81,6 @@
         <input id="username" name="username" type="email" inputmode="email" placeholder="admin@yourdomain.com" required aria-required="true" autocomplete="username" />
       </label>
 
-      <!-- password + toggle -->
       <label class="input" for="password">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 8V7a6 6 0 1 1 12 0v1h1a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a1 1 0 0 1 1-1h1zm2 0h8V7a4 4 0 0 0-8 0v1z"></path>
@@ -190,13 +107,21 @@
     </form>
   </main>
 
-  <!-- Firebase v12 modular CDN + auth handling in a module script -->
+  <!-- Firebase v12 modular CDN + auth handling -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      onAuthStateChanged,
+      setPersistence,
+      browserLocalPersistence,
+      browserSessionPersistence,
+      getIdTokenResult
+    } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
 
-    // Replace with your project's config (you already shared this earlier)
+    // -- your firebase config (replace if needed)
     const firebaseConfig = {
       apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
       authDomain: "gods-turf.firebaseapp.com",
@@ -207,10 +132,9 @@
       measurementId: "G-NNV2S3D6V3"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    try { getAnalytics(app); } catch(e){ /* analytics is optional */ }
+    try { getAnalytics(app); } catch(e){ /* optional */ }
 
     // DOM refs
     const form = document.getElementById('loginForm');
@@ -222,7 +146,6 @@
     const demo = document.getElementById('demoBtn');
     const remember = document.getElementById('remember');
 
-    // helper
     function showError(msg){
       errorBanner.textContent = msg;
       errorBanner.classList.add('show');
@@ -232,7 +155,6 @@
       errorBanner.classList.remove('show');
     }
 
-    // Enable submit only when both fields look filled
     function updateState(){
       const ok = emailEl.value.trim().length > 3 && pwEl.value.trim().length >= 6;
       loginBtn.disabled = !ok;
@@ -240,7 +162,6 @@
     emailEl.addEventListener('input', updateState);
     pwEl.addEventListener('input', updateState);
 
-    // toggle pw
     toggle.addEventListener('click', () => {
       const isPw = pwEl.type === 'password';
       pwEl.type = isPw ? 'text' : 'password';
@@ -248,7 +169,6 @@
       toggle.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
     });
 
-    // Demo fills (local test)
     demo.addEventListener('click', () => {
       emailEl.value = 'admin@local.test';
       pwEl.value = 'password123';
@@ -256,15 +176,36 @@
       pwEl.focus();
     });
 
-    // If already signed in, go to admin immediately
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        // optionally you can check user claims here if you implement role-based access
-        window.location.href = './admin.html';
+    // === Option 1: only redirect if user has custom claim admin === true ===
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        // no signed-in user — nothing to do
+        return;
+      }
+
+      try {
+        // get token result and check custom claims
+        const idTokenRes = await getIdTokenResult(user, /* forceRefresh */ false);
+        const isAdmin = idTokenRes?.claims?.admin === true;
+
+        if (isAdmin) {
+          // user is admin => go to admin panel
+          window.location.href = './admin.html';
+        } else {
+          // signed-in but not admin. Sign them out and show a friendly message.
+          await auth.signOut();
+          showError('Signed-in user is not an admin. Please use an admin account.');
+          console.warn('Signed-out non-admin user:', user.email);
+        }
+      } catch (err) {
+        console.error('Failed to verify admin claim:', err);
+        // Be safe: sign out and show message
+        try { await auth.signOut(); } catch(e){/*ignore*/ }
+        showError('Auth check failed. Please sign in again.');
       }
     });
 
-    // Form submit: set persistence based on Remember checkbox
+    // Form submit: set persistence based on Remember checkbox and sign in
     form.addEventListener('submit', async (ev) => {
       ev.preventDefault();
       clearError();
@@ -275,7 +216,6 @@
       const password = pwEl.value;
 
       try {
-        // choose persistence
         if (remember.checked) {
           await setPersistence(auth, browserLocalPersistence);
         } else {
@@ -283,8 +223,10 @@
         }
 
         await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged will handle redirect — but to be explicit:
-        window.location.href = './admin.html';
+        // onAuthStateChanged will verify the claim and redirect if admin
+        // but redirect proactively for snappy UX:
+        // (we still rely on claim-check to finally allow access)
+        // window.location.href = './admin.html';
       } catch (err) {
         console.error('Login failed:', err);
         let msg = 'Login failed — check credentials or network.';
@@ -303,7 +245,6 @@
       }
     });
 
-    // Enter key support on password
     pwEl.addEventListener('keyup', (e) => {
       if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
     });
