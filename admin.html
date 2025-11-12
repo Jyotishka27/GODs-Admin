@@ -7,22 +7,32 @@
   <link rel="icon" href="./assets/logo.svg" type="image/svg+xml"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body{font-family:Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
   </style>
 </head>
 <body class="bg-white text-gray-900">
+  <!-- Header -->
   <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
       <a class="flex items-center gap-2" href="./index.html">
         <img src="./assets/logo.svg" class="h-8 w-8" alt="logo">
         <span class="font-bold">Admin — <span id="bizName">GODs Turf</span></span>
       </a>
-      <div class="flex items-center gap-2">
-        <a href="./index.html" class="px-3 py-2 rounded-xl border">Back to site</a>
+
+      <div class="flex items-center gap-4">
+        <!-- 👤 Logged-in user email -->
+        <span id="adminEmail" class="text-sm text-gray-600"></span>
+
+        <!-- 🔴 Logout button -->
+        <button id="logoutBtn"
+          class="px-3 py-2 rounded-xl border border-red-300 text-red-600 hover:bg-red-50 transition font-medium">
+          Logout
+        </button>
       </div>
     </div>
   </header>
 
+  <!-- Main content -->
   <main class="max-w-6xl mx-auto px-4 py-8">
     <div class="mb-6 flex gap-2">
       <button id="tabBookings" class="px-3 py-2 rounded-xl bg-emerald-600 text-white">Bookings</button>
@@ -113,9 +123,52 @@
       <div id="adminNotifs" class="overflow-auto border rounded-2xl p-3 text-sm"></div>
     </section>
 
-    <p class="text-xs text-gray-500 mt-2">* Demo admin uses browser storage. Wire it to a backend for production.</p>
+    <p class="text-xs text-gray-500 mt-2">* Demo admin uses Firebase Auth + Firestore. Wire backend rules for production.</p>
   </main>
 
+  <!-- Main Admin Logic -->
   <script type="module" src="./scripts/admin.js"></script>
+
+  <!-- ✅ Firebase Auth & Logout -->
+  <script type="module">
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
+      authDomain: "gods-turf.firebaseapp.com",
+      projectId: "gods-turf",
+      storageBucket: "gods-turf.firebasestorage.app",
+      messagingSenderId: "46992157689",
+      appId: "1:46992157689:web:e8289a4a32ee8bc2bb2b28",
+      measurementId: "G-NNV2S3D6V3"
+    };
+
+    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    const adminEmailEl = document.getElementById("adminEmail");
+    const logoutBtn = document.getElementById("logoutBtn");
+
+    // ✅ Redirect if not signed in
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        window.location.href = "./index.html";
+      } else {
+        adminEmailEl.textContent = `Logged in as ${user.email}`;
+      }
+    });
+
+    // ✅ Logout action
+    logoutBtn.addEventListener("click", async () => {
+      try {
+        await signOut(auth);
+        window.location.href = "./index.html";
+      } catch (err) {
+        console.error("Logout failed:", err);
+        alert("Logout failed. Please try again.");
+      }
+    });
+  </script>
 </body>
 </html>
