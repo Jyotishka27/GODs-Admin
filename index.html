@@ -5,123 +5,68 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Login – GODs Turf</title>
 
-  <style>
-    :root{
-      --bg1: #0f172a;    /* dark navy */
-      --bg2: #071033;    /* darker */
-      --accent: #16a34a; /* green */
-      --muted: #94a3b8;  /* slate-400 */
-    }
-    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:32px;
-      background: radial-gradient(1200px 600px at 10% 10%, rgba(22,163,74,0.06), transparent),
-                  radial-gradient(1200px 600px at 90% 90%, rgba(14,165,233,0.03), transparent),
-                  linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%);
-      color:#e6eef8;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-
-    .card { width:100%; max-width:420px; border-radius:16px; padding:28px; box-sizing:border-box;
-      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-      box-shadow: 0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
-      backdrop-filter: blur(8px) saturate(1.05);
-      border: 1px solid rgba(255,255,255,0.04);
-    }
-    .brand { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
-    .brand .logo { width:48px;height:48px;border-radius:10px; background:linear-gradient(135deg,#10b981,#059669); display:flex;align-items:center;justify-content:center; color:white;font-weight:700;font-size:18px; }
-    h2 { margin: 0 0 8px 0; font-size:20px; color:#f8fafc }
-    .lead { margin:0 0 18px 0; color:var(--muted); font-size:13px; }
-    form { display:flex; flex-direction:column; gap:12px; }
-
-    .input { display:flex; align-items:center; gap:10px; background: rgba(255,255,255,0.02); border-radius:10px; padding:8px 12px; border:1px solid rgba(255,255,255,0.03);}
-    .input:focus-within{ box-shadow: 0 6px 18px rgba(3,7,18,0.55); border-color: rgba(22,163,74,0.9); }
-    .input svg{ flex:0 0 18px; opacity:0.9; color:var(--muted); }
-    input[type="text"], input[type="password"], input[type="email"]{ border:0;background:transparent;color:inherit;outline:none;font-size:14px;width:100%; padding:8px 0; }
-
-    .row-between{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:4px; }
-    .muted { color:var(--muted); font-size:13px; }
-
-    .actions { display:flex; gap:12px; align-items:center; margin-top:6px; }
-    .btn { flex:1; padding:10px 14px; border-radius:10px; font-weight:600; border:0; cursor:pointer;
-      background: linear-gradient(90deg,var(--accent), #059669); color:white; box-shadow: 0 10px 30px rgba(4,120,87,0.15); }
-    .btn[disabled]{ opacity:0.6; cursor:not-allowed; box-shadow:none; background: linear-gradient(90deg,#1f2937,#111827); }
-    .ghost { background: transparent; border:1px solid rgba(255,255,255,0.06); color: #e6eef8; padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer; }
-    .hint { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; }
-    .error { background: linear-gradient(90deg, rgba(244,63,94,0.08), rgba(244,63,94,0.03)); color:#fecaca; border:1px solid rgba(244,63,94,0.18); padding:8px 12px; border-radius:8px; font-size:13px; display:none; }
-    .error.show { display:block; }
-    .pw-toggle { background:transparent;border:0;color:var(--muted); cursor:pointer; font-weight:600; padding:4px; }
-    @media (max-width:480px){ .card{ padding:20px; border-radius:12px; } }
-  </style>
+  <!-- ✅ Tailwind + your site-wide stylesheet -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="./styles/style.css" />
 </head>
-<body>
-  <main class="card" role="main" aria-labelledby="loginHeading">
-    <div class="brand" aria-hidden="false">
-      <div class="logo" aria-hidden="true">GT</div>
+
+<body class="flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-slate-100">
+  <main class="w-full max-w-sm bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-xl">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="bg-gradient-to-br from-emerald-500 to-emerald-700 w-12 h-12 flex items-center justify-center text-white font-bold rounded-xl">GT</div>
       <div>
-        <h1>GODs TURF</h1>
-        <p style="margin-top:4px">Admin dashboard access</p>
+        <h1 class="text-lg font-semibold tracking-wide text-white">GODs TURF</h1>
+        <p class="text-xs text-slate-400">Admin dashboard access</p>
       </div>
     </div>
 
-    <h2 id="loginHeading">Welcome back, Admin</h2>
-    <p class="lead">Sign in to manage bookings, courts and waitlists.</p>
+    <h2 class="text-xl font-semibold mb-1">Welcome back, Admin</h2>
+    <p class="text-sm text-slate-400 mb-4">Sign in to manage bookings and waitlists.</p>
 
-    <form id="loginForm" novalidate autocomplete="on" aria-describedby="formHint">
-      <div id="errorBanner" class="error" role="alert" aria-live="assertive"></div>
+    <form id="loginForm" class="flex flex-col gap-3" novalidate>
+      <div id="errorBanner" class="hidden text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg p-2"></div>
 
-      <label class="input" for="username">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-          <path fill="currentColor" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11zM4.5 6A.5.5 0 0 0 4 6.5v.2l7 4.2 7-4.2v-.2a.5.5 0 0 0-.5-.5h-15z"></path>
-        </svg>
-        <input id="username" name="username" type="email" inputmode="email" placeholder="admin@yourdomain.com" required aria-required="true" autocomplete="username" />
-      </label>
+      <input id="username" type="email" placeholder="admin@yourdomain.com"
+        class="input-like w-full bg-white/5 text-white placeholder-slate-400" required />
 
-      <label class="input" for="password">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-          <path fill="currentColor" d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 8V7a6 6 0 1 1 12 0v1h1a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a1 1 0 0 1 1-1h1zm2 0h8V7a4 4 0 0 0-8 0v1z"></path>
-        </svg>
+      <div class="relative">
+        <input id="password" type="password" placeholder="Enter password"
+          class="input-like w-full bg-white/5 text-white placeholder-slate-400 pr-14" required />
+        <button type="button" id="togglePw"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-slate-400 hover:text-emerald-400">Show</button>
+      </div>
 
-        <input id="password" name="password" type="password" placeholder="Enter password" required aria-required="true" autocomplete="current-password" />
-        <button type="button" id="togglePw" class="pw-toggle" aria-label="Show password" title="Show password">Show</button>
-      </label>
-
-      <div class="row-between" style="margin-top:4px;">
-        <label class="small" style="display:flex; align-items:center; gap:8px">
-          <input id="remember" type="checkbox" style="width:16px; height:16px; accent-color: #16a34a;" />
-          Remember me
+      <div class="flex justify-between items-center text-sm mt-1">
+        <label class="flex items-center gap-2 text-slate-400">
+          <input id="remember" type="checkbox" class="accent-emerald-500 w-4 h-4" /> Remember me
         </label>
-        <a class="link" href="#" id="forgotLink">Forgot password?</a>
+        <a href="#" class="text-emerald-400 hover:underline">Forgot password?</a>
       </div>
 
-      <div class="actions" style="margin-top:8px;">
-        <button id="loginBtn" class="btn" type="submit" disabled>Login</button>
-        <button type="button" id="demoBtn" class="ghost" title="Use demo admin (suggested for local/dev)">Demo</button>
-      </div>
+      <button id="loginBtn" type="submit"
+        class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-semibold glow transition disabled:opacity-60"
+        disabled>Login</button>
 
-      <p id="formHint" class="hint">Use your admin email to login. For local testing, click <strong>Demo</strong>.</p>
+      <button type="button" id="demoBtn"
+        class="w-full border border-white/10 text-slate-200 py-2 rounded-lg hover:bg-white/10 transition">Demo</button>
+
+      <p class="text-xs text-center text-slate-400 mt-1">Use your admin email to login. For local testing, click <strong>Demo</strong>.</p>
     </form>
   </main>
 
-  <!-- Firebase v12 modular CDN + auth handling -->
+  <!-- ✅ Firebase v12 modular CDN -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
     import {
       getAuth,
       signInWithEmailAndPassword,
       onAuthStateChanged,
+      getIdTokenResult,
       setPersistence,
       browserLocalPersistence,
-      browserSessionPersistence,
-      getIdTokenResult
+      browserSessionPersistence
     } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
 
-    // -- your firebase config (replace if needed)
     const firebaseConfig = {
       apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
       authDomain: "gods-turf.firebaseapp.com",
@@ -134,123 +79,80 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    try { getAnalytics(app); } catch(e){ /* optional */ }
 
-    // DOM refs
     const form = document.getElementById('loginForm');
     const emailEl = document.getElementById('username');
     const pwEl = document.getElementById('password');
-    const loginBtn = document.getElementById('loginBtn');
-    const errorBanner = document.getElementById('errorBanner');
     const toggle = document.getElementById('togglePw');
-    const demo = document.getElementById('demoBtn');
+    const loginBtn = document.getElementById('loginBtn');
+    const demoBtn = document.getElementById('demoBtn');
     const remember = document.getElementById('remember');
+    const errorBanner = document.getElementById('errorBanner');
 
-    function showError(msg){
+    function showError(msg) {
       errorBanner.textContent = msg;
-      errorBanner.classList.add('show');
+      errorBanner.classList.remove('hidden');
     }
-    function clearError(){
+    function clearError() {
       errorBanner.textContent = '';
-      errorBanner.classList.remove('show');
+      errorBanner.classList.add('hidden');
     }
 
-    function updateState(){
-      const ok = emailEl.value.trim().length > 3 && pwEl.value.trim().length >= 6;
-      loginBtn.disabled = !ok;
+    function updateState() {
+      loginBtn.disabled = !(emailEl.value.trim() && pwEl.value.trim().length >= 6);
     }
     emailEl.addEventListener('input', updateState);
     pwEl.addEventListener('input', updateState);
 
     toggle.addEventListener('click', () => {
-      const isPw = pwEl.type === 'password';
-      pwEl.type = isPw ? 'text' : 'password';
-      toggle.textContent = isPw ? 'Hide' : 'Show';
-      toggle.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+      const show = pwEl.type === 'password';
+      pwEl.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Hide' : 'Show';
     });
 
-    demo.addEventListener('click', () => {
+    demoBtn.addEventListener('click', () => {
       emailEl.value = 'admin@local.test';
       pwEl.value = 'password123';
       updateState();
-      pwEl.focus();
     });
 
-    // === Option 1: only redirect if user has custom claim admin === true ===
+    // ✅ Only redirect if admin claim is true
     onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        // no signed-in user — nothing to do
-        return;
-      }
-
+      if (!user) return;
       try {
-        // get token result and check custom claims
-        const idTokenRes = await getIdTokenResult(user, /* forceRefresh */ false);
-        const isAdmin = idTokenRes?.claims?.admin === true;
-
-        if (isAdmin) {
-          // user is admin => go to admin panel
+        const token = await getIdTokenResult(user);
+        if (token?.claims?.admin === true) {
           window.location.href = './admin.html';
         } else {
-          // signed-in but not admin. Sign them out and show a friendly message.
           await auth.signOut();
-          showError('Signed-in user is not an admin. Please use an admin account.');
-          console.warn('Signed-out non-admin user:', user.email);
+          showError('Signed-in user is not an admin.');
         }
-      } catch (err) {
-        console.error('Failed to verify admin claim:', err);
-        // Be safe: sign out and show message
-        try { await auth.signOut(); } catch(e){/*ignore*/ }
+      } catch (e) {
+        console.error(e);
+        await auth.signOut();
         showError('Auth check failed. Please sign in again.');
       }
     });
 
-    // Form submit: set persistence based on Remember checkbox and sign in
-    form.addEventListener('submit', async (ev) => {
-      ev.preventDefault();
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
       clearError();
       loginBtn.disabled = true;
       loginBtn.textContent = 'Signing in…';
-
-      const email = emailEl.value.trim();
-      const password = pwEl.value;
-
       try {
-        if (remember.checked) {
-          await setPersistence(auth, browserLocalPersistence);
-        } else {
-          await setPersistence(auth, browserSessionPersistence);
-        }
-
-        await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged will verify the claim and redirect if admin
-        // but redirect proactively for snappy UX:
-        // (we still rely on claim-check to finally allow access)
-        // window.location.href = './admin.html';
+        await setPersistence(auth, remember.checked ? browserLocalPersistence : browserSessionPersistence);
+        await signInWithEmailAndPassword(auth, emailEl.value.trim(), pwEl.value.trim());
       } catch (err) {
         console.error('Login failed:', err);
-        let msg = 'Login failed — check credentials or network.';
-        if (err && err.code) {
-          switch(err.code){
-            case 'auth/user-not-found': msg = 'No user found for that email.'; break;
-            case 'auth/wrong-password': msg = 'Wrong password.'; break;
-            case 'auth/too-many-requests': msg = 'Too many attempts. Try again later.'; break;
-            case 'auth/network-request-failed': msg = 'Network error. Check connection.'; break;
-            default: msg = err.message || msg;
-          }
-        }
+        let msg = 'Login failed — check credentials.';
+        if (err.code === 'auth/user-not-found') msg = 'User not found.';
+        else if (err.code === 'auth/wrong-password') msg = 'Incorrect password.';
+        else if (err.code === 'auth/network-request-failed') msg = 'Network error.';
         showError(msg);
         loginBtn.disabled = false;
         loginBtn.textContent = 'Login';
       }
     });
-
-    pwEl.addEventListener('keyup', (e) => {
-      if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
-    });
-
-    // initial state
-    updateState();
   </script>
 </body>
 </html>
