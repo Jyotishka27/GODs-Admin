@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Login – GODs Turf</title>
 
-  <!-- Optional: keep your external stylesheet if you prefer.
-       This example uses a small embedded CSS bundle so it's easy to drop in. -->
   <style>
     :root{
       --bg1: #0f172a;    /* dark navy */
@@ -132,10 +130,8 @@
     .link { color:#d1fae5; text-decoration:none; font-weight:600; font-size:13px; }
     .link:hover { text-decoration:underline; }
 
-    /* password toggle */
     .pw-toggle { background:transparent;border:0;color:var(--muted); cursor:pointer; font-weight:600; padding:4px; }
 
-    /* responsive */
     @media (max-width:480px){
       .card{ padding:20px; border-radius:12px; }
       .brand h1{ font-size:16px; }
@@ -161,7 +157,6 @@
 
       <!-- email -->
       <label class="input" for="username">
-        <!-- mail icon -->
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
           <path fill="currentColor" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11zM4.5 6A.5.5 0 0 0 4 6.5v.2l7 4.2 7-4.2v-.2a.5.5 0 0 0-.5-.5h-15z"></path>
         </svg>
@@ -195,97 +190,126 @@
     </form>
   </main>
 
-  <script>
-    // Small, careful JS to improve UX: enable/disable submit, show/hide password, demo credentials
-    (function(){
-      const form = document.getElementById('loginForm');
-      const email = document.getElementById('username');
-      const pw = document.getElementById('password');
-      const loginBtn = document.getElementById('loginBtn');
-      const errorBanner = document.getElementById('errorBanner');
-      const toggle = document.getElementById('togglePw');
-      const demo = document.getElementById('demoBtn');
+  <!-- Firebase v12 modular CDN + auth handling in a module script -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
 
-      // enable submit only when both fields have content
-      function updateState(){
-        const ok = email.value.trim().length > 3 && pw.value.trim().length >= 6;
-        loginBtn.disabled = !ok;
-      }
-      email.addEventListener('input', updateState);
-      pw.addEventListener('input', updateState);
+    // Replace with your project's config (you already shared this earlier)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
+      authDomain: "gods-turf.firebaseapp.com",
+      projectId: "gods-turf",
+      storageBucket: "gods-turf.firebasestorage.app",
+      messagingSenderId: "46992157689",
+      appId: "1:46992157689:web:e8289a4a32ee8bc2bb2b28",
+      measurementId: "G-NNV2S3D6V3"
+    };
 
-      // show/hide password
-      toggle.addEventListener('click', () => {
-        const isPw = pw.type === 'password';
-        pw.type = isPw ? 'text' : 'password';
-        toggle.textContent = isPw ? 'Hide' : 'Show';
-        toggle.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
-      });
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    try { getAnalytics(app); } catch(e){ /* analytics is optional */ }
 
-      // Demo button (useful for local dev) — fills fields with a demo user
-      demo.addEventListener('click', () => {
-        email.value = 'admin@local.test';
-        pw.value = 'password123';
-        updateState();
-        // focus password so it appears ready
-        pw.focus();
-      });
+    // DOM refs
+    const form = document.getElementById('loginForm');
+    const emailEl = document.getElementById('username');
+    const pwEl = document.getElementById('password');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorBanner = document.getElementById('errorBanner');
+    const toggle = document.getElementById('togglePw');
+    const demo = document.getElementById('demoBtn');
+    const remember = document.getElementById('remember');
 
-      // Form submit: use existing Firebase signInWithEmailAndPassword if available.
-      form.addEventListener('submit', async (ev) => {
-        ev.preventDefault();
-        errorBanner.classList.remove('show');
-        errorBanner.textContent = '';
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Signing in…';
+    // helper
+    function showError(msg){
+      errorBanner.textContent = msg;
+      errorBanner.classList.add('show');
+    }
+    function clearError(){
+      errorBanner.textContent = '';
+      errorBanner.classList.remove('show');
+    }
 
-        const payload = { email: email.value.trim(), password: pw.value };
-        try {
-          // If firebase is loaded on the page (as in your original), call signInWithEmailAndPassword.
-          // Otherwise fallback to a simulated delay (useful for demo/local).
-          if (window.firebase && window.firebase.auth && typeof window.firebase.auth === 'function') {
-            // legacy firebase namespace — skip; prefer modular SDK in your project
-          }
+    // Enable submit only when both fields look filled
+    function updateState(){
+      const ok = emailEl.value.trim().length > 3 && pwEl.value.trim().length >= 6;
+      loginBtn.disabled = !ok;
+    }
+    emailEl.addEventListener('input', updateState);
+    pwEl.addEventListener('input', updateState);
 
-          // modular Firebase (your page already imports in module): check for signInWithEmailAndPassword in global scope
-          if (typeof signInWithEmailAndPassword === 'function') {
-            // modular function is available (you need to import it as in your page)
-            // assume `auth` variable exists (from initializeApp/getAuth)
-            await signInWithEmailAndPassword(auth, payload.email, payload.password);
-            // redirect on success (this mirrors your original behavior)
-            window.location.href = './admin.html';
-            return;
-          }
+    // toggle pw
+    toggle.addEventListener('click', () => {
+      const isPw = pwEl.type === 'password';
+      pwEl.type = isPw ? 'text' : 'password';
+      toggle.textContent = isPw ? 'Hide' : 'Show';
+      toggle.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    });
 
-          // fallback: simulate success for demo credential only
-          if (payload.email === 'admin@local.test' && payload.password === 'password123') {
-            window.location.href = './admin.html';
-            return;
-          }
-
-          // fallback error
-          throw new Error('Auth not configured in this environment or invalid credentials.');
-        } catch (err) {
-          console.error('Login failed:', err);
-          errorBanner.textContent = 'Login failed — ' + (err?.message || 'Unknown error');
-          errorBanner.classList.add('show');
-          loginBtn.disabled = false;
-          loginBtn.textContent = 'Login';
-        }
-      });
-
-      // Helpful UX: press Enter in password triggers submit if enabled
-      pw.addEventListener('keyup', (e) => {
-        if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
-      });
-
-      // small accessibility: ensure input placeholders remain usable
-      email.setAttribute('aria-label','Admin email');
-      pw.setAttribute('aria-label','Password');
-
-      // initial state
+    // Demo fills (local test)
+    demo.addEventListener('click', () => {
+      emailEl.value = 'admin@local.test';
+      pwEl.value = 'password123';
       updateState();
-    })();
+      pwEl.focus();
+    });
+
+    // If already signed in, go to admin immediately
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // optionally you can check user claims here if you implement role-based access
+        window.location.href = './admin.html';
+      }
+    });
+
+    // Form submit: set persistence based on Remember checkbox
+    form.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      clearError();
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Signing in…';
+
+      const email = emailEl.value.trim();
+      const password = pwEl.value;
+
+      try {
+        // choose persistence
+        if (remember.checked) {
+          await setPersistence(auth, browserLocalPersistence);
+        } else {
+          await setPersistence(auth, browserSessionPersistence);
+        }
+
+        await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged will handle redirect — but to be explicit:
+        window.location.href = './admin.html';
+      } catch (err) {
+        console.error('Login failed:', err);
+        let msg = 'Login failed — check credentials or network.';
+        if (err && err.code) {
+          switch(err.code){
+            case 'auth/user-not-found': msg = 'No user found for that email.'; break;
+            case 'auth/wrong-password': msg = 'Wrong password.'; break;
+            case 'auth/too-many-requests': msg = 'Too many attempts. Try again later.'; break;
+            case 'auth/network-request-failed': msg = 'Network error. Check connection.'; break;
+            default: msg = err.message || msg;
+          }
+        }
+        showError(msg);
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+      }
+    });
+
+    // Enter key support on password
+    pwEl.addEventListener('keyup', (e) => {
+      if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
+    });
+
+    // initial state
+    updateState();
   </script>
 </body>
 </html>
