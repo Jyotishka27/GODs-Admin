@@ -1,4 +1,4 @@
-// scripts/admin-app.js
+// scripts/admin.js
 // Admin panel script (no login handling here — login is done on another page)
 // - Expects the admin HTML you provided (IDs: filterDate, filterCourt, filterStatus, rows, wlRows, exportCsv, clearAll, refreshBtn, etc.)
 // - Uses Firebase client SDK (Firestore). Make sure Firestore rules allow this admin client to read/write, or use server-proxy approach for production.
@@ -104,6 +104,17 @@ function toast(msg, err=false){
   } else {
     console.log(msg);
   }
+}
+
+/* ---------- NEW helper: derive court amount ---------- */
+// Return numeric amount for a court id using SITE_CFG.courts
+function getCourtAmount(courtId){
+  if(!SITE_CFG || !Array.isArray(SITE_CFG.courts) || !courtId) return 0;
+  const c = SITE_CFG.courts.find(x => String(x.id) === String(courtId));
+  if(!c) return 0;
+  // accept common field names: price, amount, rate, fee
+  const amt = c.price ?? c.amount ?? c.rate ?? c.fee ?? 0;
+  return Number(amt) || 0;
 }
 
 /* ---------- Firestore reads ---------- */
@@ -387,7 +398,9 @@ async function convertWishlistToBooking(wishlistId){
         if(dd.status !== 'cancelled') conflictExists = true;
       });
       if(conflictExists) throw new Error("Slot already booked");
-      // create booking doc and update wishlist
+      // determine amount: prefer wishlist amount, otherwise derive from site config for that court
+      const derivedAmount = (wl.amount && Number(wl.amount)) ? Number(wl.amount) : getCourtAmount(wl.court);
+      // create booking doc and update wishlist (set booking as pending)
       const bookingRef = doc(collection(db,"bookings"));
       t.set(bookingRef, {
         userName: wl.userName || wl.name || "Converted",
@@ -398,8 +411,7 @@ async function convertWishlistToBooking(wishlistId){
         slotId: wl.slotId,
         slotLabel: wl.slotLabel,
         date: wl.date,
-        amount: wl.amount || 0,
-        // set as pending — admin must confirm it
+        amount: derivedAmount,
         status: "pending",
         createdAt: serverTimestamp(),
         convertedFromWishlist: wishlistId
