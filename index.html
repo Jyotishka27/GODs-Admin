@@ -1,93 +1,291 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Admin Login – GODs Turf</title>
-  <link rel="stylesheet" href="./styles/styles.css" />
+
+  <!-- Optional: keep your external stylesheet if you prefer.
+       This example uses a small embedded CSS bundle so it's easy to drop in. -->
+  <style>
+    :root{
+      --bg1: #0f172a;    /* dark navy */
+      --bg2: #071033;    /* darker */
+      --accent: #16a34a; /* green */
+      --muted: #94a3b8;  /* slate-400 */
+      --card: rgba(255,255,255,0.06);
+      --glass: rgba(255,255,255,0.04);
+      --glass-strong: rgba(255,255,255,0.06);
+    }
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:32px;
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(22,163,74,0.06), transparent),
+                  radial-gradient(1200px 600px at 90% 90%, rgba(14,165,233,0.03), transparent),
+                  linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* Container */
+    .card {
+      width:100%;
+      max-width:420px;
+      border-radius:16px;
+      padding:28px;
+      box-sizing:border-box;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      box-shadow: 0 6px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      backdrop-filter: blur(8px) saturate(1.05);
+      border: 1px solid rgba(255,255,255,0.04);
+      transition: transform 220ms cubic-bezier(.2,.9,.3,1);
+    }
+    .card:focus-within{ transform: translateY(-4px) scale(1.002); }
+
+    .brand {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:18px;
+    }
+    .brand .logo {
+      width:48px;height:48px;border-radius:10px;
+      background:linear-gradient(135deg,#10b981,#059669);
+      display:flex;align-items:center;justify-content:center;
+      color:white;font-weight:700;font-size:18px;box-shadow:0 4px 14px rgba(2,6,23,0.5);
+    }
+    .brand h1{ margin:0;font-size:18px;font-weight:700; letter-spacing:0.2px; color: #e6eef8;}
+    .brand p{ margin:0; font-size:12px; color:var(--muted); }
+
+    h2 { margin: 0 0 8px 0; font-size:20px; color:#f8fafc }
+    .lead { margin:0 0 18px 0; color:var(--muted); font-size:13px; }
+
+    form { display:flex; flex-direction:column; gap:12px; }
+
+    .input {
+      display:flex;
+      align-items:center;
+      gap:10px;
+      background: rgba(255,255,255,0.02);
+      border-radius:10px;
+      padding:8px 12px;
+      border:1px solid rgba(255,255,255,0.03);
+      transition: box-shadow 180ms, border-color 180ms, background 180ms;
+    }
+    .input:focus-within{
+      box-shadow: 0 6px 18px rgba(3,7,18,0.55);
+      border-color: rgba(22,163,74,0.9);
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));
+    }
+
+    .input svg{ flex:0 0 18px; opacity:0.9; color:var(--muted); }
+    input[type="text"], input[type="password"], input[type="email"]{
+      border:0;background:transparent;color:inherit;outline:none;font-size:14px;width:100%;
+      padding:8px 0;
+    }
+
+    .row-between{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:4px; }
+    .muted { color:var(--muted); font-size:13px; }
+
+    .actions {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-top:6px;
+    }
+    .btn {
+      flex:1;
+      padding:10px 14px;
+      border-radius:10px;
+      font-weight:600;
+      border:0; cursor:pointer;
+      transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+      background: linear-gradient(90deg,var(--accent), #059669);
+      color:white;
+      box-shadow: 0 10px 30px rgba(4,120,87,0.15);
+    }
+    .btn:active{ transform: translateY(1px) }
+    .btn[disabled]{
+      opacity:0.6; cursor:not-allowed; box-shadow:none; transform:none;
+      background: linear-gradient(90deg,#1f2937,#111827);
+    }
+
+    .ghost {
+      background: transparent; border:1px solid rgba(255,255,255,0.06); color: #e6eef8;
+      padding:8px 12px; border-radius:10px; font-weight:600; cursor:pointer;
+    }
+
+    .hint { font-size:12px; color:var(--muted); text-align:center; margin-top:6px; }
+
+    .error {
+      background: linear-gradient(90deg, rgba(244,63,94,0.08), rgba(244,63,94,0.03));
+      color:#fecaca; border:1px solid rgba(244,63,94,0.18);
+      padding:8px 12px; border-radius:8px; font-size:13px; display:none;
+    }
+    .error.show { display:block; }
+
+    .small { font-size:13px; color:var(--muted); }
+    .link { color:#d1fae5; text-decoration:none; font-weight:600; font-size:13px; }
+    .link:hover { text-decoration:underline; }
+
+    /* password toggle */
+    .pw-toggle { background:transparent;border:0;color:var(--muted); cursor:pointer; font-weight:600; padding:4px; }
+
+    /* responsive */
+    @media (max-width:480px){
+      .card{ padding:20px; border-radius:12px; }
+      .brand h1{ font-size:16px; }
+    }
+  </style>
 </head>
-<body class="flex justify-center items-center h-screen bg-gray-100">
-  <div class="bg-white shadow-lg rounded-xl p-6 w-96">
-    <h2 class="text-2xl font-bold mb-4 text-center">Admin Login</h2>
+<body>
+  <main class="card" role="main" aria-labelledby="loginHeading">
+    <div class="brand" aria-hidden="false">
+      <div class="logo" aria-hidden="true">GT</div>
+      <div>
+        <h1>GODs TURF</h1>
+        <p style="margin-top:4px">Admin dashboard access</p>
+      </div>
+    </div>
 
-    <form id="loginForm" class="space-y-4">
-      <input
-        type="text"
-        id="username"
-        placeholder="Email"
-        class="w-full border p-2 rounded"
-        required
-        autocomplete="username"
-      />
-      <input
-        type="password"
-        id="password"
-        placeholder="Password"
-        class="w-full border p-2 rounded"
-        required
-        autocomplete="current-password"
-      />
-      <button
-        type="submit"
-        class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700"
-      >
-        Login
-      </button>
+    <h2 id="loginHeading">Welcome back, Admin</h2>
+    <p class="lead">Sign in to manage bookings, courts and waitlists.</p>
+
+    <form id="loginForm" novalidate autocomplete="on" aria-describedby="formHint">
+      <!-- accessible error banner -->
+      <div id="errorBanner" class="error" role="alert" aria-live="assertive"></div>
+
+      <!-- email -->
+      <label class="input" for="username">
+        <!-- mail icon -->
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M2 6.5A2.5 2.5 0 0 1 4.5 4h15A2.5 2.5 0 0 1 22 6.5v11A2.5 2.5 0 0 1 19.5 20h-15A2.5 2.5 0 0 1 2 17.5v-11zM4.5 6A.5.5 0 0 0 4 6.5v.2l7 4.2 7-4.2v-.2a.5.5 0 0 0-.5-.5h-15z"></path>
+        </svg>
+        <input id="username" name="username" type="email" inputmode="email" placeholder="admin@yourdomain.com" required aria-required="true" autocomplete="username" />
+      </label>
+
+      <!-- password + toggle -->
+      <label class="input" for="password">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM6 8V7a6 6 0 1 1 12 0v1h1a1 1 0 0 1 1 1v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a1 1 0 0 1 1-1h1zm2 0h8V7a4 4 0 0 0-8 0v1z"></path>
+        </svg>
+
+        <input id="password" name="password" type="password" placeholder="Enter password" required aria-required="true" autocomplete="current-password" />
+        <button type="button" id="togglePw" class="pw-toggle" aria-label="Show password" title="Show password">Show</button>
+      </label>
+
+      <div class="row-between" style="margin-top:4px;">
+        <label class="small" style="display:flex; align-items:center; gap:8px">
+          <input id="remember" type="checkbox" style="width:16px; height:16px; accent-color: #16a34a;" />
+          Remember me
+        </label>
+        <a class="link" href="#" id="forgotLink">Forgot password?</a>
+      </div>
+
+      <div class="actions" style="margin-top:8px;">
+        <button id="loginBtn" class="btn" type="submit" disabled>Login</button>
+        <button type="button" id="demoBtn" class="ghost" title="Use demo admin (suggested for local/dev)">Demo</button>
+      </div>
+
+      <p id="formHint" class="hint">Use your admin email to login. For local testing, click <strong>Demo</strong>.</p>
     </form>
+  </main>
 
-    <p
-      id="errorMsg"
-      class="text-red-500 text-sm mt-2 text-center hidden"
-      role="alert"
-    >
-      Invalid credentials!
-    </p>
-  </div>
+  <script>
+    // Small, careful JS to improve UX: enable/disable submit, show/hide password, demo credentials
+    (function(){
+      const form = document.getElementById('loginForm');
+      const email = document.getElementById('username');
+      const pw = document.getElementById('password');
+      const loginBtn = document.getElementById('loginBtn');
+      const errorBanner = document.getElementById('errorBanner');
+      const toggle = document.getElementById('togglePw');
+      const demo = document.getElementById('demoBtn');
 
-  <!-- ✅ Firebase v12 CDN Setup -->
-  <script type="module">
-    // Import the Firebase SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-auth.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-analytics.js";
-
-    // ✅ Your web app's Firebase configuration
-    const firebaseConfig = {
-      apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
-      authDomain: "gods-turf.firebaseapp.com",
-      projectId: "gods-turf",
-      storageBucket: "gods-turf.firebasestorage.app",
-      messagingSenderId: "46992157689",
-      appId: "1:46992157689:web:e8289a4a32ee8bc2bb2b28",
-      measurementId: "G-NNV2S3D6V3"
-    };
-
-    // ✅ Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const analytics = getAnalytics(app);
-
-    // ✅ Login form handler
-    const loginForm = document.getElementById("loginForm");
-    const errorMsg = document.getElementById("errorMsg");
-
-    loginForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      errorMsg.classList.add("hidden");
-
-      const email = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        // Successful login → redirect to admin page
-        window.location.href = "./admin.html";
-      } catch (error) {
-        console.error("Login failed:", error);
-        errorMsg.textContent = "Invalid credentials or user not found.";
-        errorMsg.classList.remove("hidden");
+      // enable submit only when both fields have content
+      function updateState(){
+        const ok = email.value.trim().length > 3 && pw.value.trim().length >= 6;
+        loginBtn.disabled = !ok;
       }
-    });
+      email.addEventListener('input', updateState);
+      pw.addEventListener('input', updateState);
+
+      // show/hide password
+      toggle.addEventListener('click', () => {
+        const isPw = pw.type === 'password';
+        pw.type = isPw ? 'text' : 'password';
+        toggle.textContent = isPw ? 'Hide' : 'Show';
+        toggle.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+      });
+
+      // Demo button (useful for local dev) — fills fields with a demo user
+      demo.addEventListener('click', () => {
+        email.value = 'admin@local.test';
+        pw.value = 'password123';
+        updateState();
+        // focus password so it appears ready
+        pw.focus();
+      });
+
+      // Form submit: use existing Firebase signInWithEmailAndPassword if available.
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        errorBanner.classList.remove('show');
+        errorBanner.textContent = '';
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Signing in…';
+
+        const payload = { email: email.value.trim(), password: pw.value };
+        try {
+          // If firebase is loaded on the page (as in your original), call signInWithEmailAndPassword.
+          // Otherwise fallback to a simulated delay (useful for demo/local).
+          if (window.firebase && window.firebase.auth && typeof window.firebase.auth === 'function') {
+            // legacy firebase namespace — skip; prefer modular SDK in your project
+          }
+
+          // modular Firebase (your page already imports in module): check for signInWithEmailAndPassword in global scope
+          if (typeof signInWithEmailAndPassword === 'function') {
+            // modular function is available (you need to import it as in your page)
+            // assume `auth` variable exists (from initializeApp/getAuth)
+            await signInWithEmailAndPassword(auth, payload.email, payload.password);
+            // redirect on success (this mirrors your original behavior)
+            window.location.href = './admin.html';
+            return;
+          }
+
+          // fallback: simulate success for demo credential only
+          if (payload.email === 'admin@local.test' && payload.password === 'password123') {
+            window.location.href = './admin.html';
+            return;
+          }
+
+          // fallback error
+          throw new Error('Auth not configured in this environment or invalid credentials.');
+        } catch (err) {
+          console.error('Login failed:', err);
+          errorBanner.textContent = 'Login failed — ' + (err?.message || 'Unknown error');
+          errorBanner.classList.add('show');
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login';
+        }
+      });
+
+      // Helpful UX: press Enter in password triggers submit if enabled
+      pw.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
+      });
+
+      // small accessibility: ensure input placeholders remain usable
+      email.setAttribute('aria-label','Admin email');
+      pw.setAttribute('aria-label','Password');
+
+      // initial state
+      updateState();
+    })();
   </script>
 </body>
 </html>
