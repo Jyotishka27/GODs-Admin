@@ -98,16 +98,22 @@ function toast(msg, err=false){
 function parseToDate(val){
   if(val === undefined || val === null || val === "") return null;
   try {
+    // Firestore Timestamp (has toDate)
     if (typeof val === 'object' && typeof val.toDate === 'function') return val.toDate();
+    // Firestore-like { seconds, nanoseconds }
     if (typeof val === 'object' && (val.seconds !== undefined)) {
       const ms = (Number(val.seconds) * 1000) + (Number(val.nanoseconds || 0) / 1e6);
       return new Date(ms);
     }
+    // number (seconds or milliseconds)
     if (typeof val === 'number') {
+      // seconds (10 digits) -> ms
       if (String(Math.trunc(val)).length <= 10) return new Date(val * 1000);
       return new Date(val);
     }
+    // string
     if (typeof val === 'string') {
+      // For ISO-like strings Date can parse
       const d = new Date(val);
       if (!Number.isNaN(d.getTime())) return d;
     }
@@ -121,16 +127,23 @@ function formatDateTo12Hour(d){
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+// Normalize tokens: "20" => "20:00", "2030"=>"20:30", "8pm"=>"8PM", "06:00"=>"06:00"
 function normalizeTimeToken(token){
   if(!token) return null;
   token = String(token).trim();
+  // normalize spacing and AM/PM to uppercase
   token = token.replace(/\s*(am|pm|AM|PM)\s*/g, (m,p)=> p.toUpperCase());
+  // if HH:MM with optional AM/PM
   if(/^\d{1,2}:\d{2}(AM|PM)?$/i.test(token)) return token;
+  // HHMM
   if(/^\d{4}$/.test(token)) return `${token.slice(0,2)}:${token.slice(2,4)}`;
   if(/^\d{3}$/.test(token)) return `${token.slice(0,1)}:${token.slice(1,3)}`;
+  // single/double hour "6" => "06:00"
   if(/^\d{1,2}$/.test(token)) return `${String(token).padStart(2,'0')}:00`;
+  // "6PM" or "6AM"
   let m = token.match(/^(\d{1,2})(AM|PM)$/i);
   if(m) return `${String(m[1]).padStart(2,'0')}${m[2].toUpperCase()}`;
+  // if contains ":" cleanup non-digits
   if(token.includes(":")){
     const parts = token.split(":").map(s=>s.replace(/\D/g,''));
     if(parts.length>=2) return `${parts[0].padStart(2,'0')}:${parts[1].padStart(2,'0')}`;
@@ -138,8 +151,10 @@ function normalizeTimeToken(token){
   return null;
 }
 
+// Parse human-friendly label ranges: "06:00 - 07:00", "6 AM - 7 AM", "6:00PM–7:00PM" etc.
 function parseRangeFromLabel(label){
   if(!label || typeof label !== 'string') return null;
+  // separators: -, –, —, to
   const sepRegex = /(?:\s*(?:-|–|—|to|–|—)\s*)/i;
   const parts = label.split(sepRegex);
   if(parts.length < 2) return null;
@@ -147,9 +162,13 @@ function parseRangeFromLabel(label){
   const right = parts[1].trim();
   const ln = normalizeTimeToken(left) || left;
   const rn = normalizeTimeToken(right) || right;
+
+  // attempt using dummy date
   const sd = parseToDate(`2000-01-01T${ln}`) || parseToDate(left);
   const ed = parseToDate(`2000-01-01T${rn}`) || parseToDate(right);
   if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+
+  // last try: if both have AM/PM strings
   if(/[ap]m/i.test(left) && /[ap]m/i.test(right)){
     const s = new Date(`2000-01-01 ${left}`);
     const e = new Date(`2000-01-01 ${right}`);
@@ -158,14 +177,20 @@ function parseRangeFromLabel(label){
   return null;
 }
 
+// Derive range from slot-like strings: handles "06:00-07:00", "06:00_07:00", "20-21", "1930-2030", "8AM-9AM", etc.
 function deriveRangeFromSlotText(text){
   if(!text) return null;
   const s = String(text).trim();
+
+  // if label-like:
   if(/[ap]m|:|\bto\b/i.test(s)){
     const pl = parseRangeFromLabel(s);
     if(pl) return pl;
   }
+
+  // split tokens by underscores/spaces/slashes
   const tokens = s.split(/[_\s|/]+/).filter(Boolean);
+  // look for token with a hyphen
   for(const t of tokens){
     if(t.includes("-")){
       const [leftRaw, rightRaw] = t.split("-").map(x=>x.trim());
@@ -175,12 +200,15 @@ function deriveRangeFromSlotText(text){
         const sd = parseToDate(`2000-01-01T${ln}`);
         const ed = parseToDate(`2000-01-01T${rn}`);
         if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+        // sometimes ln or rn include AM/PM like 06:00 or 6PM
         const sd2 = parseToDate(leftRaw) || parseToDate(`2000-01-01 ${leftRaw}`);
         const ed2 = parseToDate(rightRaw) || parseToDate(`2000-01-01 ${rightRaw}`);
         if(sd2 && ed2) return `${formatDateTo12Hour(sd2)} – ${formatDateTo12Hour(ed2)}`;
       }
     }
   }
+
+  // if no hyphen token, try to find two time-like substrings using regex
   const timeRegex = /(\d{1,2}(?::\d{2})?\s?(?:AM|PM|am|pm)?|\d{3,4})/g;
   const found = [...s.matchAll(timeRegex)].map(m => m[0].trim());
   if(found.length >= 2){
@@ -192,6 +220,8 @@ function deriveRangeFromSlotText(text){
       if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
     }
   }
+
+  // fallback: digits pairs e.g., 1930 2030
   const digitsRegex = /(\d{3,4})/g;
   const digs = [...s.matchAll(digitsRegex)].map(m => m[0]);
   if(digs.length >= 2){
@@ -203,12 +233,16 @@ function deriveRangeFromSlotText(text){
       if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
     }
   }
+
   return null;
 }
 
+// Main display function for a booking object
 function displayRangeForBooking(b){
+  // 1) explicit start/end fields
   const startCandidates = ['startISO','start','startAt','start_time','startTimestamp','startAtISO'];
   const endCandidates = ['endISO','end','endAt','end_time','endTimestamp','endAtISO'];
+
   let sd = null, ed = null;
   for(const k of startCandidates){
     if(b[k] !== undefined && b[k] !== null){
@@ -225,17 +259,23 @@ function displayRangeForBooking(b){
   if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
   if(sd && !ed) return `${formatDateTo12Hour(sd)}`;
   if(!sd && ed) return `${formatDateTo12Hour(ed)}`;
+
+  // 2) slotLabel first (common)
   const slotLabel = b.slotLabel || b.slot_label || b.label || '';
   if(slotLabel){
     const p = deriveRangeFromSlotText(slotLabel);
     if(p) return p;
   }
+
+  // 3) slotId / slot / slotId-like fields
   const slotFields = [b.slotId, b.slot, b.slot_id, b.slotIdString, b.slotLabel];
   for(const sf of slotFields){
     if(!sf) continue;
     const p = deriveRangeFromSlotText(sf);
     if(p) return p;
   }
+
+  // 4) explicit "06:00-07:00" in slotId is handled above; if still not found — warn for debugging
   console.warn("Time parse failed for booking:", {
     id: b._id,
     startISO: b.startISO, start: b.start, startAt: b.startAt,
@@ -244,12 +284,15 @@ function displayRangeForBooking(b){
   return "—";
 }
 
-/* ---------- Court label overrides (explicit mapping based on your input) ---------- */
+/* ---------- Court label overrides (explicit mapping) ---------- */
+// Updated mapping per your latest: 5A = left half, 5B = right half
 const COURT_LABEL_OVERRIDES = {
-  "5A": "Half Ground Football",
-  "5A-B": "Half Ground Football",
+  "5A": "Half Ground (Left Half)",
+  "5B": "Half Ground (Right Half)",
+  "5A-B": "Half Ground Football", // keep for backward compatibility if some docs use 5A-B
   "7A": "Full Ground Football",
-  "CRK": "Cricket"
+  "CRK": "Full Ground (Cricket)",
+  "CRICKET": "Full Ground (Cricket)"
 };
 
 /* ---------- Court label helper ---------- */
@@ -266,14 +309,14 @@ function getCourtLabel(courtId){
     }
   }
 
-  // 2) explicit overrides from the mapping you provided
+  // 2) explicit overrides from mapping
   if(COURT_LABEL_OVERRIDES[id]) return COURT_LABEL_OVERRIDES[id];
 
-  // 3) fallback heuristics (safe)
+  // 3) fallback heuristics
   const low = id.toLowerCase();
   if(low.includes("cricket") || low.includes("crk")) return "Full Ground (Cricket)";
-  if(low.includes("full")) return "Full Ground";
-  if(/^\d+[ab]$/i.test(id)) return "Half Ground Football";
+  if(low.includes("full")) return "Full Ground Football";
+  if(/^\d+[ab]$/i.test(id) || /^\d+[A-B]$/i.test(id)) return "Half Ground Football";
   if(/^\d+$/.test(id)) return "Full Ground Football";
   return id;
 }
@@ -285,7 +328,7 @@ function getCourtAmount(courtId){
     if(c) return Number(c.basePrice ?? c.price ?? c.amount ?? 0) || 0;
   }
   // fallback defaults (optional — update if needed)
-  const overrides = { "5A":1500, "5A-B":1500, "7A":2500, "CRK":2500 };
+  const overrides = { "5A":1500, "5B":1500, "5A-B":1500, "7A":2500, "CRK":2500, "CRICKET":2500 };
   return Number(overrides[String(courtId)] || 0);
 }
 
@@ -304,6 +347,7 @@ async function fetchBookings({ date, court, status } = {}) {
       const data = d.data(); data._id = d.id;
       items.push(data);
     });
+    // sort: slotId then createdAt
     items.sort((a,b)=> (a.slotId||'').localeCompare(b.slotId||'') || (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
     return items;
   } catch (err) {
@@ -378,7 +422,7 @@ function renderBookingsTable(bookings) {
     rowsTbody.appendChild(tr);
   });
 
-  // bind actions (same as before)...
+  // bind actions (delete/cancel/confirm)
   rowsTbody.querySelectorAll("button[data-delete]").forEach(btn=>{
     btn.addEventListener("click", async ()=> {
       const id = btn.dataset.delete;
@@ -404,7 +448,7 @@ function renderBookingsTable(bookings) {
     });
   });
 
-  // WhatsApp button (uses courtLabel)
+  // WhatsApp button behavior
   rowsTbody.querySelectorAll("button[data-wa]").forEach(btn=>{
     btn.addEventListener("click", ()=> {
       const id = btn.dataset.wa;
@@ -452,7 +496,7 @@ function renderWaitlistTable(wls) {
     wlRowsTbody.appendChild(tr);
   });
 
-  // bind waitlist actions...
+  // bind waitlist actions
   wlRowsTbody.querySelectorAll("button[data-wl-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=> {
       const id = btn.dataset.wlDel;
@@ -482,7 +526,7 @@ function renderWaitlistTable(wls) {
   });
 }
 
-/* ---------- Actions (same as before) ---------- */
+/* ---------- Actions (Firestore writes) ---------- */
 async function deleteBooking(id){
   try {
     await deleteDoc(doc(db, "bookings", id));
@@ -552,7 +596,7 @@ async function exportBookingsCsv(date){
   } catch (err) { console.error(err); toast("Export failed", true); }
 }
 
-/* ---------- Convert wishlist -> booking (same as before) ---------- */
+/* ---------- Convert wishlist -> booking ---------- */
 async function convertWishlistToBooking(wishlistId){
   if(functions){
     try{
@@ -565,12 +609,14 @@ async function convertWishlistToBooking(wishlistId){
       toast("Cloud function unavailable — trying client-side conversion", true);
     }
   }
+
   try {
     const wlRef = doc(db, "wishlists", wishlistId);
     await runTransaction(db, async (t)=>{
       const wlSnap = await t.get(wlRef);
       if(!wlSnap.exists()) throw new Error("Wishlist not found");
       const wl = wlSnap.data();
+      // check conflicts for the date+slot
       const conflictQ = query(collection(db,"bookings"), where("date","==", wl.date), where("slotId","==", wl.slotId));
       const conflictSnap = await getDocs(conflictQ);
       let conflictExists = false;
@@ -579,7 +625,9 @@ async function convertWishlistToBooking(wishlistId){
         if(dd.status !== 'cancelled') conflictExists = true;
       });
       if(conflictExists) throw new Error("Slot already booked");
+      // determine amount: prefer wishlist amount, otherwise derive from site config for that court
       const derivedAmount = (wl.amount && Number(wl.amount)) ? Number(wl.amount) : getCourtAmount(wl.court);
+      // create booking doc and update wishlist (set booking as pending)
       const bookingRef = doc(collection(db,"bookings"));
       t.set(bookingRef, {
         userName: wl.userName || wl.name || "Converted",
@@ -625,9 +673,11 @@ async function refreshCurrentView(){
 /* ---------- Event wiring ---------- */
 function wireUI(){
   if(filterDate && !filterDate.value) filterDate.value = fmtDateISO();
+
   if(filterDate) filterDate.addEventListener("change", refreshCurrentView);
   if(filterCourt) filterCourt.addEventListener("change", refreshCurrentView);
   if(filterStatus) filterStatus.addEventListener("change", refreshCurrentView);
+
   exportCsvBtn?.addEventListener("click", ()=> exportBookingsCsv(filterDate?.value || undefined));
   clearAllBtn?.addEventListener("click", ()=> {
     if(!confirm("Delete ALL bookings (for selected date if date chosen)? This is irreversible.")) return;
@@ -635,7 +685,7 @@ function wireUI(){
   });
   refreshBtn?.addEventListener("click", refreshCurrentView);
 
-  // Tabs
+  // tabs wiring
   document.getElementById("tabBookings")?.addEventListener("click", ()=> {
     document.getElementById("bookingsSection").classList.remove("hidden");
     document.getElementById("waitlistSection").classList.add("hidden");
