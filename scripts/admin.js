@@ -59,6 +59,7 @@ const waitlistSection = $id("waitlistSection");
 const notificationsSection = $id("notificationsSection");
 // optional notif area
 const adminNotifs = $id("adminNotifs");
+const bizNameEl = $id("bizName");
 
 /* ---------- Site config runtime ---------- */
 let SITE_CFG = null;
@@ -89,10 +90,56 @@ function fmtDateISO(d = new Date()){
   return `${y}-${m}-${dd}`;
 }
 function escapeHtml(s){ if(s===undefined||s===null) return ""; return String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function timeFromISO(iso){
-  try { return new Date(iso).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
-  catch(e){ return iso || ""; }
+
+/* Robust time formatter that accepts:
+   - Firestore Timestamp (has toDate())
+   - Firestore-like object with seconds + nanoseconds
+   - Number (seconds or milliseconds)
+   - ISO string or Date
+   Returns "HH:MM" formatted string or "—" when invalid.
+*/
+function timeFromISO(val){
+  if(val === undefined || val === null || val === "") return "—";
+  try {
+    let d = null;
+    // Firestore Timestamp object with toDate()
+    if (typeof val === 'object' && typeof val.toDate === 'function') {
+      d = val.toDate();
+    }
+    // Firestore-like object { seconds, nanoseconds }
+    else if (typeof val === 'object' && (val.seconds !== undefined)) {
+      const ms = (Number(val.seconds) * 1000) + (Number(val.nanoseconds || 0) / 1e6);
+      d = new Date(ms);
+    }
+    // numeric: seconds or milliseconds
+    else if (typeof val === 'number') {
+      // if obviously seconds (10-digit) convert to ms
+      if (String(Math.trunc(val)).length <= 10) {
+        d = new Date(val * 1000);
+      } else {
+        d = new Date(val);
+      }
+    }
+    // string: attempt Date parse
+    else if (typeof val === 'string') {
+      d = new Date(val);
+    }
+    // Date instance
+    else if (val instanceof Date) {
+      d = val;
+    }
+
+    if (!d || Number.isNaN(d.getTime())) return "—";
+
+    // produce HH:MM (24-hour) or fallback to locale time if available
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mm = String(d.getMinutes()).padStart(2,'0');
+    return `${hh}:${mm}`;
+  } catch (e) {
+    return "—";
+  }
 }
+
 function toast(msg, err=false){
   // minimal toast: append to adminNotifs if available
   if(adminNotifs){
@@ -189,14 +236,17 @@ function renderBookingsTable(bookings) {
       actionButtons += `<button data-delete="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>`;
     }
 
+    const displayedTime = timeFromISO(b.startISO || b.start);
+    const displayedAmount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
+
     tr.innerHTML = `
       <td class="px-3 py-2 font-mono text-xs">${escapeHtml(b._id)}</td>
       <td class="px-3 py-2">${statusBadge}</td>
       <td class="px-3 py-2">${escapeHtml(b.court || b.courtId || '')}</td>
       <td class="px-3 py-2">${escapeHtml(b.date || b.dateISO || '')}</td>
-      <td class="px-3 py-2">${escapeHtml(timeFromISO(b.startISO || b.start))}</td>
+      <td class="px-3 py-2">${escapeHtml(displayedTime)}</td>
       <td class="px-3 py-2">${escapeHtml(b.userName || b.name || '')}<br><span class="text-gray-500 text-xs">${escapeHtml(b.phone || '')}</span></td>
-      <td class="px-3 py-2">₹${Number(b.amount || b.price || 0).toLocaleString('en-IN')}</td>
+      <td class="px-3 py-2">₹${displayedAmount.toLocaleString('en-IN')}</td>
       <td class="px-3 py-2">${escapeHtml(b.notes || '')}</td>
       <td class="px-3 py-2 space-x-2">
         ${actionButtons}
@@ -231,13 +281,22 @@ function renderBookingsTable(bookings) {
       await refreshCurrentView();
     });
   });
+
+  // WhatsApp button behavior with improved message template
   rowsTbody.querySelectorAll("button[data-wa]").forEach(btn=>{
     btn.addEventListener("click", ()=> {
       const id = btn.dataset.wa;
       const b = bookings.find(x => x._id === id);
       if(!b || !b.phone){ toast("Phone not available", true); return; }
       const phonePlain = String(b.phone).replace(/^\+/, '');
-      const msg = `Booking ID: ${b._id}\nDate: ${b.date}\nTime: ${timeFromISO(b.startISO || b.start)}\nStatus: ${b.status||'pending'}`;
+
+      // source / business name
+      const sourceName = (SITE_CFG && SITE_CFG.name) ? SITE_CFG.name : (bizNameEl ? bizNameEl.textContent.trim() : "GODs Turf");
+      const timeStr = timeFromISO(b.startISO || b.start);
+      const amountStr = Number(b.amount || b.price || getCourtAmount(b.court) || 0).toLocaleString('en-IN');
+
+      const msg = `Hi! This is ${sourceName}.\nWe are sending this message from ${sourceName} (automated notification).\n\nBooking details:\nBooking ID: ${b._id}\nDate: ${b.date || ''}\nTime: ${timeStr}\nCourt: ${b.court || ''}\nStatus: ${b.status || 'pending'}\nAmount: ₹${amountStr}\n\nIf you have any questions, reply to this message. Thank you!`;
+
       window.open(`https://wa.me/${phonePlain}?text=${encodeURIComponent(msg)}`, '_blank');
     });
   });
