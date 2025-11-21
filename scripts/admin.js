@@ -91,53 +91,156 @@ function fmtDateISO(d = new Date()){
 }
 function escapeHtml(s){ if(s===undefined||s===null) return ""; return String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* Robust time formatter that accepts:
-   - Firestore Timestamp (has toDate())
-   - Firestore-like object with seconds + nanoseconds
-   - Number (seconds or milliseconds)
-   - ISO string or Date
-   Returns "HH:MM" formatted string or "—" when invalid.
+/* Robust time parsing and formatting helpers:
+   - parse a variety of timestamp shapes (Firestore Timestamp with toDate(), {seconds,nanoseconds}, number ms/sec, ISO string)
+   - formatDateTo12Hour(d) => "8:00 PM"
 */
-function timeFromISO(val){
-  if(val === undefined || val === null || val === "") return "—";
+function parseToDate(val){
+  if(val === undefined || val === null || val === "") return null;
   try {
-    let d = null;
     // Firestore Timestamp object with toDate()
     if (typeof val === 'object' && typeof val.toDate === 'function') {
-      d = val.toDate();
+      return val.toDate();
     }
     // Firestore-like object { seconds, nanoseconds }
-    else if (typeof val === 'object' && (val.seconds !== undefined)) {
+    if (typeof val === 'object' && (val.seconds !== undefined)) {
       const ms = (Number(val.seconds) * 1000) + (Number(val.nanoseconds || 0) / 1e6);
-      d = new Date(ms);
+      return new Date(ms);
     }
     // numeric: seconds or milliseconds
-    else if (typeof val === 'number') {
-      // if obviously seconds (10-digit) convert to ms
+    if (typeof val === 'number') {
       if (String(Math.trunc(val)).length <= 10) {
-        d = new Date(val * 1000);
+        return new Date(val * 1000);
       } else {
-        d = new Date(val);
+        return new Date(val);
       }
     }
     // string: attempt Date parse
-    else if (typeof val === 'string') {
-      d = new Date(val);
+    if (typeof val === 'string') {
+      const d = new Date(val);
+      if (!Number.isNaN(d.getTime())) return d;
     }
     // Date instance
-    else if (val instanceof Date) {
-      d = val;
+    if (val instanceof Date) return val;
+  } catch(e){}
+  return null;
+}
+
+function formatDateTo12Hour(d){
+  if(!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  // return e.g. "8:00 PM"
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+/* Try to derive a start and end time range string from slotId
+   Examples of slotId:
+     - "2025-11-21_7A_20-21"           -> "8:00 PM – 9:00 PM"
+     - "2025-11-21_7A_20:30-21:30"     -> "8:30 PM – 9:30 PM"
+     - "2025-11-21_7A_1930-2030"       -> "7:30 PM – 8:30 PM" (if you use HHmm)
+   Returns a string like "8:00 PM – 9:00 PM" or null when not derivable.
+*/
+function deriveRangeFromSlotId(slotId){
+  try{
+    if(!slotId || typeof slotId !== 'string') return null;
+    const parts = slotId.split("_");
+    // support either 3+ parts (date, court, time-range) or 2 parts (date_time)
+    let datePart, timeRangePart;
+    if(parts.length >= 3){
+      datePart = parts[0];
+      timeRangePart = parts.slice(2).join("_"); // join in case the time had underscores
+    } else if(parts.length === 2 && parts[1].includes("-")){
+      // handle "2025-11-21-20-21" or "2025-11-21_20-21" covered earlier
+      datePart = parts[0];
+      timeRangePart = parts[1];
+    } else {
+      return null;
     }
 
-    if (!d || Number.isNaN(d.getTime())) return "—";
+    // timeRangePart expected like "20-21" or "20:30-21:30" or "1930-2030"
+    const segments = timeRangePart.split("-");
+    if(segments.length < 2) return null;
+    let startRaw = segments[0];
+    let endRaw = segments[1];
 
-    // produce HH:MM (24-hour) or fallback to locale time if available
-    const hh = String(d.getHours()).padStart(2,'0');
-    const mm = String(d.getMinutes()).padStart(2,'0');
-    return `${hh}:${mm}`;
-  } catch (e) {
-    return "—";
+    // helper: normalize a hh or hhmm or hh:mm to "HH:MM"
+    const normalizeTimeToken = (t) => {
+      t = String(t).trim();
+      // if contains ":" already
+      if(t.includes(":")){
+        const [hh,mm] = t.split(":");
+        return `${hh.padStart(2,'0')}:${(mm||'00').padStart(2,'0')}`;
+      }
+      // if length 4 -> HHMM
+      if(t.length === 4 && /^\d{4}$/.test(t)){
+        return `${t.slice(0,2)}:${t.slice(2,4)}`;
+      }
+      // if length 3 -> HMM
+      if(t.length === 3 && /^\d{3}$/.test(t)){
+        return `${t.slice(0,1)}:${t.slice(1,3)}`;
+      }
+      // else assume hour only like "20" or "8"
+      if(/^\d{1,2}$/.test(t)){
+        return `${String(t).padStart(2,'0')}:00`;
+      }
+      return null;
+    };
+
+    const startNorm = normalizeTimeToken(startRaw);
+    const endNorm = normalizeTimeToken(endRaw);
+    if(!startNorm || !endNorm) return null;
+
+    // build Date objects using datePart + 'T' + time, taking care of timezone by constructing Date
+    const startIso = `${datePart}T${startNorm}:00`;
+    const endIso = `${datePart}T${endNorm}:00`;
+    const startDate = new Date(startIso);
+    const endDate = new Date(endIso);
+    if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+
+    const startStr = formatDateTo12Hour(startDate);
+    const endStr = formatDateTo12Hour(endDate);
+    if(!startStr || !endStr) return null;
+    return `${startStr} – ${endStr}`; // en dash
+  }catch(e){
+    return null;
   }
+}
+
+/* Get best-effort display range:
+   1) if startISO & endISO present => format both
+   2) else if startISO or start present and endISO/end present => format those
+   3) else try deriveRangeFromSlotId(slotId)
+   4) fallback "—"
+*/
+function displayRangeForBooking(b){
+  // case 1: both explicit ISO/Date-like present
+  const startVal = b.startISO ?? b.start ?? b.startAt ?? null;
+  const endVal = b.endISO ?? b.end ?? b.endAt ?? null;
+
+  const startDate = parseToDate(startVal);
+  const endDate = parseToDate(endVal);
+
+  if(startDate && endDate){
+    const s = formatDateTo12Hour(startDate);
+    const e = formatDateTo12Hour(endDate);
+    return `${s} – ${e}`;
+  }
+
+  // case 2: single date present (we'll still format single => show start only)
+  if(startDate && !endDate){
+    const s = formatDateTo12Hour(startDate);
+    return s ? `${s}` : null;
+  }
+  if(!startDate && endDate){
+    const e = formatDateTo12Hour(endDate);
+    return e ? `${e}` : null;
+  }
+
+  // case 3: derive from slotId
+  const derived = deriveRangeFromSlotId(b.slotId || b.slot || '');
+  if(derived) return derived;
+
+  // fallback
+  return "—";
 }
 
 function toast(msg, err=false){
@@ -236,7 +339,7 @@ function renderBookingsTable(bookings) {
       actionButtons += `<button data-delete="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>`;
     }
 
-    const displayedTime = timeFromISO(b.startISO || b.start);
+    const displayedRange = displayRangeForBooking(b);
     const displayedAmount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
 
     tr.innerHTML = `
@@ -244,7 +347,7 @@ function renderBookingsTable(bookings) {
       <td class="px-3 py-2">${statusBadge}</td>
       <td class="px-3 py-2">${escapeHtml(b.court || b.courtId || '')}</td>
       <td class="px-3 py-2">${escapeHtml(b.date || b.dateISO || '')}</td>
-      <td class="px-3 py-2">${escapeHtml(displayedTime)}</td>
+      <td class="px-3 py-2">${escapeHtml(displayedRange || "—")}</td>
       <td class="px-3 py-2">${escapeHtml(b.userName || b.name || '')}<br><span class="text-gray-500 text-xs">${escapeHtml(b.phone || '')}</span></td>
       <td class="px-3 py-2">₹${displayedAmount.toLocaleString('en-IN')}</td>
       <td class="px-3 py-2">${escapeHtml(b.notes || '')}</td>
@@ -292,10 +395,10 @@ function renderBookingsTable(bookings) {
 
       // source / business name
       const sourceName = (SITE_CFG && SITE_CFG.name) ? SITE_CFG.name : (bizNameEl ? bizNameEl.textContent.trim() : "GODs Turf");
-      const timeStr = timeFromISO(b.startISO || b.start);
+      const rangeStr = displayRangeForBooking(b);
       const amountStr = Number(b.amount || b.price || getCourtAmount(b.court) || 0).toLocaleString('en-IN');
 
-      const msg = `Hi! This is ${sourceName}.\nWe are sending this message from ${sourceName} (automated notification).\n\nBooking details:\nBooking ID: ${b._id}\nDate: ${b.date || ''}\nTime: ${timeStr}\nCourt: ${b.court || ''}\nStatus: ${b.status || 'pending'}\nAmount: ₹${amountStr}\n\nIf you have any questions, reply to this message. Thank you!`;
+      const msg = `Hi! This is ${sourceName}.\nWe are sending this message from ${sourceName} (automated notification).\n\nBooking details:\nBooking ID: ${b._id}\nDate: ${b.date || ''}\nTime: ${rangeStr}\nCourt: ${b.court || ''}\nStatus: ${b.status || 'pending'}\nAmount: ₹${amountStr}\n\nIf you have any questions, reply to this message. Thank you!`;
 
       window.open(`https://wa.me/${phonePlain}?text=${encodeURIComponent(msg)}`, '_blank');
     });
@@ -317,7 +420,7 @@ function renderWaitlistTable(wls) {
       <td class="px-3 py-2 font-mono text-xs">${escapeHtml(w._id)}</td>
       <td class="px-3 py-2">${escapeHtml(w.court || w.courtId || '')}</td>
       <td class="px-3 py-2">${escapeHtml(w.date || '')}</td>
-      <td class="px-3 py-2">${escapeHtml(timeFromISO(w.startISO || w.start))}</td>
+      <td class="px-3 py-2">${escapeHtml(displayRangeForBooking(w))}</td>
       <td class="px-3 py-2">${escapeHtml(w.userName || w.name || '')}<br><span class="text-gray-500 text-xs">${escapeHtml(w.phone||'')}</span></td>
       <td class="px-3 py-2 space-x-2">
         <button data-wl-del="${escapeHtml(w._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>
