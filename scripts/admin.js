@@ -1,8 +1,4 @@
 // scripts/admin.js
-// Admin panel script (no login handling here — login is done on another page)
-// - Expects the admin HTML you provided (IDs: filterDate, filterCourt, filterStatus, rows, wlRows, exportCsv, clearAll, refreshBtn, etc.)
-// - Uses Firebase client SDK (Firestore). Make sure Firestore rules allow this admin client to read/write, or use server-proxy approach for production.
-
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {
   getFirestore,
@@ -12,7 +8,6 @@ import {
   getDocs,
   doc,
   deleteDoc,
-  addDoc,
   updateDoc,
   serverTimestamp,
   writeBatch,
@@ -20,7 +15,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-functions.js";
 
-/* ---------- CONFIG: update if needed ---------- */
+/* ---------- CONFIG ---------- */
 const firebaseConfig = {
   apiKey: "AIzaSyAXDvwYufUn5C_E_IYAdm094gSmyHOg46s",
   authDomain: "gods-turf.firebaseapp.com",
@@ -30,7 +25,6 @@ const firebaseConfig = {
   appId: "1:46992157689:web:b547bc847c7a0331bb2b28"
 };
 const SITE_JSON = "/data/site.json";
-/* --------------------------------------------- */
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(app);
@@ -39,10 +33,9 @@ try { functions = getFunctions(app); } catch(e){ functions = null; console.warn(
 
 /* ---------- DOM helpers ---------- */
 const $id = id => document.getElementById(id);
-const $ = (sel, el=document) => el.querySelector(sel);
 function el(tag, cls=''){ const e = document.createElement(tag); if(cls) e.className = cls; return e; }
 
-/* ---------- UI elements (your admin.html IDs) ---------- */
+/* ---------- UI elements ---------- */
 const filterDate = $id("filterDate");
 const filterCourt = $id("filterCourt");
 const filterStatus = $id("filterStatus");
@@ -51,13 +44,6 @@ const clearAllBtn = $id("clearAll");
 const refreshBtn = $id("refreshBtn");
 const rowsTbody = $id("rows");
 const wlRowsTbody = $id("wlRows");
-const tabBookings = $id("tabBookings");
-const tabWaitlist = $id("tabWaitlist");
-const tabNotifications = $id("tabNotifications");
-const bookingsSection = $id("bookingsSection");
-const waitlistSection = $id("waitlistSection");
-const notificationsSection = $id("notificationsSection");
-// optional notif area
 const adminNotifs = $id("adminNotifs");
 const bizNameEl = $id("bizName");
 
@@ -91,160 +77,7 @@ function fmtDateISO(d = new Date()){
 }
 function escapeHtml(s){ if(s===undefined||s===null) return ""; return String(s).replace(/[&<>"]/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
-/* Robust time parsing and formatting helpers:
-   - parse a variety of timestamp shapes (Firestore Timestamp with toDate(), {seconds,nanoseconds}, number ms/sec, ISO string)
-   - formatDateTo12Hour(d) => "8:00 PM"
-*/
-function parseToDate(val){
-  if(val === undefined || val === null || val === "") return null;
-  try {
-    // Firestore Timestamp object with toDate()
-    if (typeof val === 'object' && typeof val.toDate === 'function') {
-      return val.toDate();
-    }
-    // Firestore-like object { seconds, nanoseconds }
-    if (typeof val === 'object' && (val.seconds !== undefined)) {
-      const ms = (Number(val.seconds) * 1000) + (Number(val.nanoseconds || 0) / 1e6);
-      return new Date(ms);
-    }
-    // numeric: seconds or milliseconds
-    if (typeof val === 'number') {
-      if (String(Math.trunc(val)).length <= 10) {
-        return new Date(val * 1000);
-      } else {
-        return new Date(val);
-      }
-    }
-    // string: attempt Date parse
-    if (typeof val === 'string') {
-      const d = new Date(val);
-      if (!Number.isNaN(d.getTime())) return d;
-    }
-    // Date instance
-    if (val instanceof Date) return val;
-  } catch(e){}
-  return null;
-}
-
-function formatDateTo12Hour(d){
-  if(!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
-  // return e.g. "8:00 PM"
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
-}
-
-/* Try to derive a start and end time range string from slotId
-   Examples of slotId:
-     - "2025-11-21_7A_20-21"           -> "8:00 PM – 9:00 PM"
-     - "2025-11-21_7A_20:30-21:30"     -> "8:30 PM – 9:30 PM"
-     - "2025-11-21_7A_1930-2030"       -> "7:30 PM – 8:30 PM" (if you use HHmm)
-   Returns a string like "8:00 PM – 9:00 PM" or null when not derivable.
-*/
-function deriveRangeFromSlotId(slotId){
-  try{
-    if(!slotId || typeof slotId !== 'string') return null;
-    const parts = slotId.split("_");
-    // support either 3+ parts (date, court, time-range) or 2 parts (date_time)
-    let datePart, timeRangePart;
-    if(parts.length >= 3){
-      datePart = parts[0];
-      timeRangePart = parts.slice(2).join("_"); // join in case the time had underscores
-    } else if(parts.length === 2 && parts[1].includes("-")){
-      // handle "2025-11-21-20-21" or "2025-11-21_20-21" covered earlier
-      datePart = parts[0];
-      timeRangePart = parts[1];
-    } else {
-      return null;
-    }
-
-    // timeRangePart expected like "20-21" or "20:30-21:30" or "1930-2030"
-    const segments = timeRangePart.split("-");
-    if(segments.length < 2) return null;
-    let startRaw = segments[0];
-    let endRaw = segments[1];
-
-    // helper: normalize a hh or hhmm or hh:mm to "HH:MM"
-    const normalizeTimeToken = (t) => {
-      t = String(t).trim();
-      // if contains ":" already
-      if(t.includes(":")){
-        const [hh,mm] = t.split(":");
-        return `${hh.padStart(2,'0')}:${(mm||'00').padStart(2,'0')}`;
-      }
-      // if length 4 -> HHMM
-      if(t.length === 4 && /^\d{4}$/.test(t)){
-        return `${t.slice(0,2)}:${t.slice(2,4)}`;
-      }
-      // if length 3 -> HMM
-      if(t.length === 3 && /^\d{3}$/.test(t)){
-        return `${t.slice(0,1)}:${t.slice(1,3)}`;
-      }
-      // else assume hour only like "20" or "8"
-      if(/^\d{1,2}$/.test(t)){
-        return `${String(t).padStart(2,'0')}:00`;
-      }
-      return null;
-    };
-
-    const startNorm = normalizeTimeToken(startRaw);
-    const endNorm = normalizeTimeToken(endRaw);
-    if(!startNorm || !endNorm) return null;
-
-    // build Date objects using datePart + 'T' + time, taking care of timezone by constructing Date
-    const startIso = `${datePart}T${startNorm}:00`;
-    const endIso = `${datePart}T${endNorm}:00`;
-    const startDate = new Date(startIso);
-    const endDate = new Date(endIso);
-    if(Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
-
-    const startStr = formatDateTo12Hour(startDate);
-    const endStr = formatDateTo12Hour(endDate);
-    if(!startStr || !endStr) return null;
-    return `${startStr} – ${endStr}`; // en dash
-  }catch(e){
-    return null;
-  }
-}
-
-/* Get best-effort display range:
-   1) if startISO & endISO present => format both
-   2) else if startISO or start present and endISO/end present => format those
-   3) else try deriveRangeFromSlotId(slotId)
-   4) fallback "—"
-*/
-function displayRangeForBooking(b){
-  // case 1: both explicit ISO/Date-like present
-  const startVal = b.startISO ?? b.start ?? b.startAt ?? null;
-  const endVal = b.endISO ?? b.end ?? b.endAt ?? null;
-
-  const startDate = parseToDate(startVal);
-  const endDate = parseToDate(endVal);
-
-  if(startDate && endDate){
-    const s = formatDateTo12Hour(startDate);
-    const e = formatDateTo12Hour(endDate);
-    return `${s} – ${e}`;
-  }
-
-  // case 2: single date present (we'll still format single => show start only)
-  if(startDate && !endDate){
-    const s = formatDateTo12Hour(startDate);
-    return s ? `${s}` : null;
-  }
-  if(!startDate && endDate){
-    const e = formatDateTo12Hour(endDate);
-    return e ? `${e}` : null;
-  }
-
-  // case 3: derive from slotId
-  const derived = deriveRangeFromSlotId(b.slotId || b.slot || '');
-  if(derived) return derived;
-
-  // fallback
-  return "—";
-}
-
 function toast(msg, err=false){
-  // minimal toast: append to adminNotifs if available
   if(adminNotifs){
     const p = el("div","p-1 text-sm");
     p.textContent = msg;
@@ -256,13 +89,201 @@ function toast(msg, err=false){
   }
 }
 
+/* ---------- Time parsing/format helpers ---------- */
+
+function parseToDate(val){
+  if(val === undefined || val === null || val === "") return null;
+  try {
+    // Firestore Timestamp (has toDate)
+    if (typeof val === 'object' && typeof val.toDate === 'function') return val.toDate();
+    // Firestore-like { seconds, nanoseconds }
+    if (typeof val === 'object' && (val.seconds !== undefined)) {
+      const ms = (Number(val.seconds) * 1000) + (Number(val.nanoseconds || 0) / 1e6);
+      return new Date(ms);
+    }
+    // number (seconds or milliseconds)
+    if (typeof val === 'number') {
+      if (String(Math.trunc(val)).length <= 10) return new Date(val * 1000);
+      return new Date(val);
+    }
+    // string
+    if (typeof val === 'string') {
+      // If it's like "06:00-07:00" we don't parse here — handled elsewhere.
+      const d = new Date(val);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+    if (val instanceof Date) return val;
+  } catch(e){}
+  return null;
+}
+
+function formatDateTo12Hour(d){
+  if(!d || !(d instanceof Date) || Number.isNaN(d.getTime())) return null;
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+// Normalize tokens: "20" => "20:00", "2030"=>"20:30", "8pm"=>"8PM", "06:00"=>"06:00"
+function normalizeTimeToken(token){
+  if(!token) return null;
+  token = String(token).trim();
+  // remove punctuation around AM/PM
+  token = token.replace(/\s*(am|pm|AM|PM)\s*/g, (m,p)=> p.toUpperCase());
+  // if HH:MM with optional AM/PM
+  if(/^\d{1,2}:\d{2}(AM|PM)?$/i.test(token)) return token;
+  // HHMM
+  if(/^\d{4}$/.test(token)) return `${token.slice(0,2)}:${token.slice(2,4)}`;
+  if(/^\d{3}$/.test(token)) return `${token.slice(0,1)}:${token.slice(1,3)}`;
+  // single/double hour "6" => "06:00"
+  if(/^\d{1,2}$/.test(token)) return `${String(token).padStart(2,'0')}:00`;
+  // "6PM" or "6AM"
+  let m = token.match(/^(\d{1,2})(AM|PM)$/i);
+  if(m) return `${String(m[1]).padStart(2,'0')}${m[2].toUpperCase()}`;
+  // if contains ":" cleanup non-digits
+  if(token.includes(":")){
+    const parts = token.split(":").map(s=>s.replace(/\D/g,''));
+    if(parts.length>=2) return `${parts[0].padStart(2,'0')}:${parts[1].padStart(2,'0')}`;
+  }
+  return null;
+}
+
+// Parse human-friendly label ranges: "06:00 - 07:00", "6 AM - 7 AM", "6:00PM–7:00PM" etc.
+function parseRangeFromLabel(label){
+  if(!label || typeof label !== 'string') return null;
+  // separators: -, –, —, to
+  const sepRegex = /(?:\s*(?:-|–|—|to|–|—)\s*)/i;
+  const parts = label.split(sepRegex);
+  if(parts.length < 2) return null;
+  const left = parts[0].trim();
+  const right = parts[1].trim();
+  const ln = normalizeTimeToken(left) || left;
+  const rn = normalizeTimeToken(right) || right;
+
+  // attempt using dummy date
+  const sd = parseToDate(`2000-01-01T${ln}`) || parseToDate(left);
+  const ed = parseToDate(`2000-01-01T${rn}`) || parseToDate(right);
+  if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+
+  // last try: if both have AM/PM strings
+  if(/[ap]m/i.test(left) && /[ap]m/i.test(right)){
+    const s = new Date(`2000-01-01 ${left}`);
+    const e = new Date(`2000-01-01 ${right}`);
+    if(!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) return `${formatDateTo12Hour(s)} – ${formatDateTo12Hour(e)}`;
+  }
+  return null;
+}
+
+// Derive range from slot-like strings: handles "06:00-07:00", "06:00_07:00", "20-21", "1930-2030", "8AM-9AM", etc.
+function deriveRangeFromSlotText(text){
+  if(!text) return null;
+  const s = String(text).trim();
+
+  // if label-like:
+  if(/[ap]m|:|\bto\b/i.test(s)){
+    const pl = parseRangeFromLabel(s);
+    if(pl) return pl;
+  }
+
+  // split tokens by underscores/spaces/slashes
+  const tokens = s.split(/[_\s|/]+/).filter(Boolean);
+  // look for token with a hyphen
+  for(const t of tokens){
+    if(t.includes("-")){
+      const [leftRaw, rightRaw] = t.split("-").map(x=>x.trim());
+      const ln = normalizeTimeToken(leftRaw);
+      const rn = normalizeTimeToken(rightRaw);
+      if(ln && rn){
+        const sd = parseToDate(`2000-01-01T${ln}`);
+        const ed = parseToDate(`2000-01-01T${rn}`);
+        if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+        // sometimes ln or rn include AM/PM like 06:00 or 6PM
+        const sd2 = parseToDate(leftRaw) || parseToDate(`2000-01-01 ${leftRaw}`);
+        const ed2 = parseToDate(rightRaw) || parseToDate(`2000-01-01 ${rightRaw}`);
+        if(sd2 && ed2) return `${formatDateTo12Hour(sd2)} – ${formatDateTo12Hour(ed2)}`;
+      }
+    }
+  }
+
+  // if no hyphen token, try to find two time-like substrings using regex
+  const timeRegex = /(\d{1,2}(?::\d{2})?\s?(?:AM|PM|am|pm)?|\d{3,4})/g;
+  const found = [...s.matchAll(timeRegex)].map(m => m[0].trim());
+  if(found.length >= 2){
+    const l = normalizeTimeToken(found[0]);
+    const r = normalizeTimeToken(found[1]);
+    if(l && r){
+      const sd = parseToDate(`2000-01-01T${l}`);
+      const ed = parseToDate(`2000-01-01T${r}`);
+      if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+    }
+  }
+
+  // fallback: digits pairs e.g., 1930 2030
+  const digitsRegex = /(\d{3,4})/g;
+  const digs = [...s.matchAll(digitsRegex)].map(m => m[0]);
+  if(digs.length >= 2){
+    const l = normalizeTimeToken(digs[0]);
+    const r = normalizeTimeToken(digs[1]);
+    if(l && r){
+      const sd = parseToDate(`2000-01-01T${l}`);
+      const ed = parseToDate(`2000-01-01T${r}`);
+      if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+    }
+  }
+
+  return null;
+}
+
+// Main display function for a booking object
+function displayRangeForBooking(b){
+  // 1) explicit start/end fields
+  const startCandidates = ['startISO','start','startAt','start_time','startTimestamp','startAtISO'];
+  const endCandidates = ['endISO','end','endAt','end_time','endTimestamp','endAtISO'];
+
+  let sd = null, ed = null;
+  for(const k of startCandidates){
+    if(b[k] !== undefined && b[k] !== null){
+      const p = parseToDate(b[k]);
+      if(p){ sd = p; break; }
+    }
+  }
+  for(const k of endCandidates){
+    if(b[k] !== undefined && b[k] !== null){
+      const p = parseToDate(b[k]);
+      if(p){ ed = p; break; }
+    }
+  }
+  if(sd && ed) return `${formatDateTo12Hour(sd)} – ${formatDateTo12Hour(ed)}`;
+  if(sd && !ed) return `${formatDateTo12Hour(sd)}`;
+  if(!sd && ed) return `${formatDateTo12Hour(ed)}`;
+
+  // 2) slotLabel first (common)
+  const slotLabel = b.slotLabel || b.slot_label || b.label || '';
+  if(slotLabel){
+    const p = deriveRangeFromSlotText(slotLabel);
+    if(p) return p;
+  }
+
+  // 3) slotId / slot / slotId-like fields
+  const slotFields = [b.slotId, b.slot, b.slot_id, b.slotIdString, b.slotLabel];
+  for(const sf of slotFields){
+    if(!sf) continue;
+    const p = deriveRangeFromSlotText(sf);
+    if(p) return p;
+  }
+
+  // 4) explicit "06:00-07:00" in slotId is handled above; if still not found — warn for debugging
+  console.warn("Time parse failed for booking:", {
+    id: b._id,
+    startISO: b.startISO, start: b.start, startAt: b.startAt,
+    endISO: b.endISO, end: b.end, slotId: b.slotId, slot: b.slot, slotLabel: slotLabel
+  });
+  return "—";
+}
+
 /* ---------- NEW helper: derive court amount ---------- */
-// Return numeric amount for a court id using SITE_CFG.courts
 function getCourtAmount(courtId){
   if(!SITE_CFG || !Array.isArray(SITE_CFG.courts) || !courtId) return 0;
   const c = SITE_CFG.courts.find(x => String(x.id) === String(courtId));
   if(!c) return 0;
-  // accept common field names: price, amount, rate, fee
   const amt = c.price ?? c.amount ?? c.rate ?? c.fee ?? 0;
   return Number(amt) || 0;
 }
@@ -276,14 +297,12 @@ async function fetchBookings({ date, court, status } = {}) {
     if (court) filters.push(where("court", "==", court));
     if (status) filters.push(where("status", "==", status));
     if (filters.length) q = query(...([collection(db,"bookings")].concat(filters)));
-    // if no filters, we still query collection
     const snap = await getDocs(q);
     const items = [];
     snap.forEach(d => {
       const data = d.data(); data._id = d.id;
       items.push(data);
     });
-    // sort by slotId (lexicographic) then createdAt
     items.sort((a,b)=> (a.slotId||'').localeCompare(b.slotId||'') || (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0));
     return items;
   } catch (err) {
@@ -325,7 +344,6 @@ function renderBookingsTable(bookings) {
       ? `<span class="px-2 py-1 rounded-full text-xs bg-emerald-100 text-emerald-700">Confirmed</span>`
       : `<span class="px-2 py-1 rounded-full text-xs bg-amber-100 text-amber-700">${escapeHtml(b.status || 'pending')}</span>`;
 
-    // Buttons: show Confirm if pending, always show Delete, show Cancel when not cancelled
     let actionButtons = '';
     if ((b.status || 'pending') === 'pending') {
       actionButtons += `<button data-confirm="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-green-700 text-sm">Confirm</button>`;
@@ -335,7 +353,6 @@ function renderBookingsTable(bookings) {
     } else if ((b.status || '') === 'cancelled') {
       actionButtons += `<button data-delete="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>`;
     } else {
-      // fallback actions
       actionButtons += `<button data-delete="${escapeHtml(b._id)}" class="px-2 py-1 rounded border text-red-600 text-sm">Delete</button>`;
     }
 
@@ -385,7 +402,7 @@ function renderBookingsTable(bookings) {
     });
   });
 
-  // WhatsApp button behavior with improved message template
+  // WhatsApp button behavior
   rowsTbody.querySelectorAll("button[data-wa]").forEach(btn=>{
     btn.addEventListener("click", ()=> {
       const id = btn.dataset.wa;
@@ -393,7 +410,6 @@ function renderBookingsTable(bookings) {
       if(!b || !b.phone){ toast("Phone not available", true); return; }
       const phonePlain = String(b.phone).replace(/^\+/, '');
 
-      // source / business name
       const sourceName = (SITE_CFG && SITE_CFG.name) ? SITE_CFG.name : (bizNameEl ? bizNameEl.textContent.trim() : "GODs Turf");
       const rangeStr = displayRangeForBooking(b);
       const amountStr = Number(b.amount || b.price || getCourtAmount(b.court) || 0).toLocaleString('en-IN');
@@ -405,6 +421,7 @@ function renderBookingsTable(bookings) {
   });
 }
 
+/* ---------- Waitlist renderer ---------- */
 function renderWaitlistTable(wls) {
   if(!wlRowsTbody) return;
   wlRowsTbody.innerHTML = "";
@@ -431,7 +448,7 @@ function renderWaitlistTable(wls) {
     wlRowsTbody.appendChild(tr);
   });
 
-  // bind
+  // bind waitlist actions
   wlRowsTbody.querySelectorAll("button[data-wl-del]").forEach(btn=>{
     btn.addEventListener("click", async ()=> {
       const id = btn.dataset.wlDel;
@@ -460,7 +477,7 @@ function renderWaitlistTable(wls) {
   });
 }
 
-/* ---------- Actions (Firestore writes) ---------- */
+/* ---------- Actions ---------- */
 async function deleteBooking(id){
   try {
     await deleteDoc(doc(db, "bookings", id));
@@ -511,6 +528,7 @@ async function exportBookingsCsv(date){
         slotId: data.slotId || '',
         slotLabel: data.slotLabel || '',
         date: data.date || '',
+        timeRange: (function(){ try { return displayRangeForBooking(data); } catch(e){ return ''; } })(),
         startISO: data.startISO || '',
         endISO: data.endISO || '',
         name: data.userName || data.name || '',
@@ -529,9 +547,8 @@ async function exportBookingsCsv(date){
   } catch (err) { console.error(err); toast("Export failed", true); }
 }
 
-/* ---------- Convert wishlist -> booking (call cloud function if available; fallback to transaction) ---------- */
+/* ---------- Convert wishlist -> booking ---------- */
 async function convertWishlistToBooking(wishlistId){
-  // try callable first
   if(functions){
     try{
       const fn = httpsCallable(functions, "convertWishlistToBooking");
@@ -543,15 +560,12 @@ async function convertWishlistToBooking(wishlistId){
       toast("Cloud function unavailable — trying client-side conversion", true);
     }
   }
-
-  // fallback: client-side transaction (best-effort)
   try {
     const wlRef = doc(db, "wishlists", wishlistId);
     await runTransaction(db, async (t)=>{
       const wlSnap = await t.get(wlRef);
       if(!wlSnap.exists()) throw new Error("Wishlist not found");
       const wl = wlSnap.data();
-      // check conflicts for the date+slot
       const conflictQ = query(collection(db,"bookings"), where("date","==", wl.date), where("slotId","==", wl.slotId));
       const conflictSnap = await getDocs(conflictQ);
       let conflictExists = false;
@@ -560,9 +574,7 @@ async function convertWishlistToBooking(wishlistId){
         if(dd.status !== 'cancelled') conflictExists = true;
       });
       if(conflictExists) throw new Error("Slot already booked");
-      // determine amount: prefer wishlist amount, otherwise derive from site config for that court
       const derivedAmount = (wl.amount && Number(wl.amount)) ? Number(wl.amount) : getCourtAmount(wl.court);
-      // create booking doc and update wishlist (set booking as pending)
       const bookingRef = doc(collection(db,"bookings"));
       t.set(bookingRef, {
         userName: wl.userName || wl.name || "Converted",
@@ -587,7 +599,6 @@ async function convertWishlistToBooking(wishlistId){
   }
 }
 
-/* ---------- Delete wishlist ---------- */
 async function deleteWishlist(id){
   try {
     await deleteDoc(doc(db, "wishlists", id));
@@ -600,23 +611,18 @@ async function refreshCurrentView(){
   const date = filterDate?.value || fmtDateISO();
   const court = filterCourt?.value || "";
   const status = filterStatus?.value || "";
-  // bookings
   const bookings = await fetchBookings({ date, court: court || undefined, status: status || undefined });
   renderBookingsTable(bookings);
-  // wishlists (fetch for date)
   const wishlist = await fetchWishlists({ date });
   renderWaitlistTable(wishlist);
 }
 
 /* ---------- Event wiring ---------- */
 function wireUI(){
-  // default date to today if empty
   if(filterDate && !filterDate.value) filterDate.value = fmtDateISO();
-
   if(filterDate) filterDate.addEventListener("change", refreshCurrentView);
   if(filterCourt) filterCourt.addEventListener("change", refreshCurrentView);
   if(filterStatus) filterStatus.addEventListener("change", refreshCurrentView);
-
   exportCsvBtn?.addEventListener("click", ()=> exportBookingsCsv(filterDate?.value || undefined));
   clearAllBtn?.addEventListener("click", ()=> {
     if(!confirm("Delete ALL bookings (for selected date if date chosen)? This is irreversible.")) return;
@@ -624,30 +630,30 @@ function wireUI(){
   });
   refreshBtn?.addEventListener("click", refreshCurrentView);
 
-  // tabs
-  tabBookings?.addEventListener("click", ()=> {
-    bookingsSection.classList.remove("hidden");
-    waitlistSection.classList.add("hidden");
-    notificationsSection.classList.add("hidden");
-    tabBookings.classList.add("bg-emerald-600","text-white");
-    tabWaitlist.classList.remove("bg-emerald-600","text-white");
-    tabNotifications.classList.remove("bg-emerald-600","text-white");
+  // Tabs
+  document.getElementById("tabBookings")?.addEventListener("click", ()=> {
+    document.getElementById("bookingsSection").classList.remove("hidden");
+    document.getElementById("waitlistSection").classList.add("hidden");
+    document.getElementById("notificationsSection").classList.add("hidden");
+    document.getElementById("tabBookings").classList.add("bg-emerald-600","text-white");
+    document.getElementById("tabWaitlist").classList.remove("bg-emerald-600","text-white");
+    document.getElementById("tabNotifications").classList.remove("bg-emerald-600","text-white");
   });
-  tabWaitlist?.addEventListener("click", ()=> {
-    bookingsSection.classList.add("hidden");
-    waitlistSection.classList.remove("hidden");
-    notificationsSection.classList.add("hidden");
-    tabBookings.classList.remove("bg-emerald-600","text-white");
-    tabWaitlist.classList.add("bg-emerald-600","text-white");
-    tabNotifications.classList.remove("bg-emerald-600","text-white");
+  document.getElementById("tabWaitlist")?.addEventListener("click", ()=> {
+    document.getElementById("bookingsSection").classList.add("hidden");
+    document.getElementById("waitlistSection").classList.remove("hidden");
+    document.getElementById("notificationsSection").classList.add("hidden");
+    document.getElementById("tabBookings").classList.remove("bg-emerald-600","text-white");
+    document.getElementById("tabWaitlist").classList.add("bg-emerald-600","text-white");
+    document.getElementById("tabNotifications").classList.remove("bg-emerald-600","text-white");
   });
-  tabNotifications?.addEventListener("click", ()=> {
-    bookingsSection.classList.add("hidden");
-    waitlistSection.classList.add("hidden");
-    notificationsSection.classList.remove("hidden");
-    tabBookings.classList.remove("bg-emerald-600","text-white");
-    tabWaitlist.classList.remove("bg-emerald-600","text-white");
-    tabNotifications.classList.add("bg-emerald-600","text-white");
+  document.getElementById("tabNotifications")?.addEventListener("click", ()=> {
+    document.getElementById("bookingsSection").classList.add("hidden");
+    document.getElementById("waitlistSection").classList.add("hidden");
+    document.getElementById("notificationsSection").classList.remove("hidden");
+    document.getElementById("tabBookings").classList.remove("bg-emerald-600","text-white");
+    document.getElementById("tabWaitlist").classList.remove("bg-emerald-600","text-white");
+    document.getElementById("tabNotifications").classList.add("bg-emerald-600","text-white");
   });
 }
 
@@ -658,5 +664,4 @@ async function boot(){
   await refreshCurrentView();
   toast("Admin panel loaded");
 }
-
 window.addEventListener("load", boot);
