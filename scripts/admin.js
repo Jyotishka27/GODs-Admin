@@ -712,11 +712,220 @@ function wireUI(){
   });
 }
 
+/* ---------- NOTIFICATIONS SYSTEM ---------- */
+let unreadCount = 0;
+const notifBell = $id("notifBell");
+const notifBadge = $id("notifBadge");
+const adminNotifs = $id("adminNotifs");
+const markAllReadBtn = $id("markAllRead");
+const clearNotifsBtn = $id("clearNotifs");
+
+/* ---------- Fetch & render notifications ---------- */
+async function fetchNotifications() {
+  try {
+    const q = query(collection(db, "adminNotifications"), 
+      orderBy("createdAt", "desc"), 
+      limit(50)
+    );
+    const snap = await getDocs(q);
+    const notifs = [];
+    snap.forEach(d => {
+      const data = d.data();
+      data._id = d.id;
+      data.isRead = data.isRead || false;
+      if (!data.isRead) unreadCount++;
+      notifs.push(data);
+    });
+    return notifs;
+  } catch (err) {
+    console.error("fetchNotifications err", err);
+    return [];
+  }
+}
+
+function renderNotifications(notifs) {
+  if (!adminNotifs) return;
+  
+  adminNotifs.innerHTML = "";
+  if (!notifs.length) {
+    adminNotifs.innerHTML = '<div class="text-gray-500 text-sm p-4 text-center">No notifications</div>';
+    updateNotificationBadge(0);
+    return;
+  }
+
+  notifs.forEach(n => {
+    const div = el("div", "group bg-white p-4 rounded-xl border hover:shadow-md cursor-pointer transition-all flex gap-3");
+    div.dataset.bookingId = n.bookingId || "";
+    div.dataset.date = n.date || "";
+    div.dataset.isRead = n.isRead ? "true" : "false";
+    
+    if (!n.isRead) {
+      div.classList.add("ring-2", "ring-blue-200", "bg-blue-50");
+    }
+    
+    const timeAgo = formatTimeAgo(n.createdAt);
+    const icon = n.type === "booking" ? "📅" : n.type === "waitlist" ? "⏳" : "ℹ️";
+    
+    div.innerHTML = `
+      <div class="flex-shrink-0 text-xl">${icon}</div>
+      <div class="flex-1 min-w-0">
+        <div class="font-medium text-sm mb-1 truncate">${n.title}</div>
+        <div class="text-xs text-gray-500 mb-1">${n.message}</div>
+        <div class="flex items-center gap-2 text-xs text-gray-400">
+          <span>${n.courtLabel || ''}</span>
+          <span>${n.date || ''} ${n.timeRange || ''}</span>
+          ${!n.isRead ? '<span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">New</span>' : ''}
+        </div>
+      </div>
+      <div class="text-xs text-gray-400 flex items-center gap-1 flex-shrink-0">
+        ${timeAgo}
+      </div>
+    `;
+    
+    div.addEventListener("click", () => handleNotificationClick(n));
+    adminNotifs.appendChild(div);
+  });
+  
+  updateNotificationBadge(unreadCount);
+}
+
+/* ---------- Real-time notifications listener ---------- */
+let unsubscribeNotifs = null;
+function setupRealtimeNotifications() {
+  if (unsubscribeNotifs) unsubscribeNotifs();
+  
+  unsubscribeNotifs = onSnapshot(
+    collection(db, "adminNotifications"),
+    (snap) => {
+      fetchNotifications().then(renderNotifications);
+    }
+  );
+}
+
+/* ---------- Notification actions ---------- */
+async function markNotificationRead(notifId) {
+  try {
+    await updateDoc(doc(db, "adminNotifications", notifId), { 
+      isRead: true,
+      readAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.error("mark read failed", err);
+  }
+}
+
+async function markAllRead() {
+  try {
+    const q = query(collection(db, "adminNotifications"), where("isRead", "==", false));
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.forEach(s => batch.update(s.ref, { 
+      isRead: true, 
+      readAt: serverTimestamp() 
+    }));
+    await batch.commit();
+    unreadCount = 0;
+  } catch (err) {
+    console.error("mark all read failed", err);
+  }
+}
+
+async function clearAllNotifications() {
+  if (!confirm("Delete ALL notifications?")) return;
+  try {
+    const q = collection(db, "adminNotifications");
+    const snap = await getDocs(q);
+    const batch = writeBatch(db);
+    snap.forEach(s => batch.delete(s.ref));
+    await batch.commit();
+    unreadCount = 0;
+  } catch (err) {
+    console.error("clear notifications failed", err);
+  }
+}
+
+function updateNotificationBadge(count) {
+  if (notifBadge) {
+    notifBadge.classList.toggle("hidden", count === 0);
+  }
+  if (notifBell) {
+    notifBell.title = count ? `View ${count} unread notifications` : "No new notifications";
+  }
+}
+
+function formatTimeAgo(timestamp) {
+  const now = new Date();
+  const then = parseToDate(timestamp);
+  if (!then) return "Unknown";
+  
+  const diffMs = now - then;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
+function handleNotificationClick(notif) {
+  // Mark as read
+  if (!notif.isRead) {
+    markNotificationRead(notif._id);
+  }
+  
+  // Navigate to booking
+  if (notif.bookingId || notif.date) {
+    // Switch to bookings tab
+    document.getElementById("tabBookings").click();
+    
+    // Set date filter
+    if (filterDate && notif.date) {
+      filterDate.value = notif.date;
+    }
+    
+    // Refresh with new filters
+    setTimeout(() => refreshCurrentView(), 100);
+    
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+/* ---------- Create notification helper (for testing) ---------- */
+async function createTestNotification() {
+  try {
+    await addDoc(collection(db, "adminNotifications"), {
+      type: "booking",
+      title: "🆕 New Booking",
+      message: "Test booking created",
+      bookingId: "TEST123",
+      date: fmtDateISO(new Date(Date.now() + 24*60*60*1000)),
+      courtLabel: "Full Ground Football",
+      timeRange: "6:00 PM – 7:00 PM",
+      createdAt: serverTimestamp(),
+      isRead: false
+    });
+  } catch (err) {
+    console.error("test notif failed", err);
+  }
+}
+
 /* ---------- boot ---------- */
 async function boot(){
   await loadSiteCfg();
   wireUI();
   await refreshCurrentView();
-  toast("Admin panel loaded");
+  
+  // Setup notifications
+  await fetchNotifications();
+  setupRealtimeNotifications();
+  
+  // Notification UI wiring
+  if (notifBell) notifBell.addEventListener("click", () => document.getElementById("tabNotifications").click());
+  if (markAllReadBtn) markAllReadBtn.addEventListener("click", markAllRead);
+  if (clearNotifsBtn) clearNotifsBtn.addEventListener("click", clearAllNotifications);
+  
+  toast("Admin panel loaded with real-time notifications 🔔");
 }
-window.addEventListener("load", boot);
