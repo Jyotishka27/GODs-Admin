@@ -8,6 +8,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    .notification-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
   </style>
 </head>
 <body class="bg-white text-gray-900">
@@ -20,6 +22,16 @@
       </a>
 
       <div class="flex items-center gap-4">
+        <!-- 🔔 Notification badge -->
+        <div class="relative">
+          <button id="notifBell" class="p-2 rounded-full hover:bg-gray-100 transition">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <span id="notifBadge" class="notification-dot absolute -top-1 -right-1 h-3 w-3 bg-red-500 border-2 border-white rounded-full hidden"></span>
+          </button>
+        </div>
+
         <!-- 👤 Logged-in user email -->
         <span id="adminEmail" class="text-sm text-gray-600"></span>
 
@@ -114,13 +126,15 @@
     <!-- Notifications -->
     <section id="notificationsSection" class="hidden mb-8">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold">Admin Notifications</h2>
-        <div>
+        <h2 class="font-semibold">🔔 Notifications</h2>
+        <div class="flex gap-2">
           <button id="markAllRead" class="px-3 py-1 rounded-xl border text-sm">Mark all read</button>
-          <button id="clearNotifs" class="px-3 py-1 rounded-xl border text-sm text-red-600">Clear</button>
+          <button id="clearNotifs" class="px-3 py-1 rounded-xl border text-sm text-red-600">Clear all</button>
         </div>
       </div>
-      <div id="adminNotifs" class="overflow-auto border rounded-2xl p-3 text-sm"></div>
+      <div id="adminNotifs" class="max-h-96 overflow-auto border rounded-2xl space-y-2 p-4 bg-gray-50/50">
+        <!-- Notifications will be populated here -->
+      </div>
     </section>
 
     <p class="text-xs text-gray-500 mt-2">* Demo admin uses Firebase Auth + Firestore. Wire backend rules for production.</p>
