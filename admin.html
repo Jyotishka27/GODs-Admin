@@ -275,7 +275,7 @@
             <div class="flex-1 min-h-0 flex gap-3">
               <!-- LEFT: list -->
               <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col min-h-0">
-                <div class="flex items	center justify-between mb-2 text-xs text-slate-500">
+                <div class="flex items-center justify-between mb-2 text-xs text-slate-500">
                   <span id="listTitle">Booking requests</span>
                   <span id="listCount" class="text-[11px] text-slate-400">0 items</span>
                 </div>
@@ -351,17 +351,220 @@
 
           <!-- VIEW: CALENDAR -->
           <section id="viewCalendar" class="flex-1 min-h-0 hidden flex-col gap-3">
-            <!-- ... unchanged ... -->
+            <!-- Top controls -->
+            <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+              <!-- Left: navigation buttons -->
+              <div class="flex items-center gap-1">
+                <button
+                  id="calendarPrev"
+                  class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 flex items-center gap-1"
+                >
+                  <span class="text-xs">←</span>
+                  <span>Prev</span>
+                </button>
+                <button
+                  id="calendarToday"
+                  class="px-3 py-1.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800"
+                >
+                  Today
+                </button>
+                <button
+                  id="calendarNext"
+                  class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 flex items-center gap-1"
+                >
+                  <span>Next</span>
+                  <span class="text-xs">→</span>
+                </button>
+              </div>
+
+              <!-- View toggles -->
+              <div class="flex items-center gap-1">
+                <button
+                  id="calendarViewDay"
+                  class="px-3 py-1.5 rounded-full text-gray-600 border border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  Day
+                </button>
+                <button
+                  id="calendarViewWeek"
+                  class="px-3 py-1.5 rounded-full text-gray-600 border border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  Week
+                </button>
+                <button
+                  id="calendarViewMonth"
+                  class="px-3 py-1.5 rounded-full text-gray-600 border border-slate-200 bg-white hover:bg-slate-50"
+                >
+                  Month
+                </button>
+              </div>
+
+              <div class="flex-1"></div>
+
+              <!-- Court filter -->
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-500">Court</label>
+                <select
+                  id="calendarCourt"
+                  class="border border-slate-300 bg-white rounded-lg px-3 py-1.5 text-slate-900 text-sm
+                         focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand"
+                >
+                  <option value="">All courts</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Calendar grid container (filled by JS) -->
+            <div id="calendarGrid" class="flex-1 min-h-0"></div>
+
+            <p class="text-[11px] text-slate-400 mt-1">
+              Calendar view shows bookings grouped by day, week, or month. Data is loaded from Firestore via
+              <code>fetchBookingsRange</code>.
+            </p>
           </section>
 
           <!-- VIEW: ANALYTICS -->
           <section id="viewAnalytics" class="flex-1 min-h-0 hidden flex-col gap-4">
-            <!-- ... unchanged ... -->
+            <!-- Summary cards -->
+            <div class="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <!-- Total bookings -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">Total bookings</span>
+                <span id="analyticsTotalBookings" class="text-lg font-semibold text-slate-900">0</span>
+                <span class="text-[11px] text-slate-400">Last 90 days</span>
+              </div>
+
+              <!-- Total revenue -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">Total revenue</span>
+                <span id="analyticsTotalRevenue" class="text-lg font-semibold text-slate-900">₹0</span>
+                <span class="text-[11px] text-slate-400">Last 90 days</span>
+              </div>
+
+              <!-- Month bookings -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">This month — bookings</span>
+                <span id="analyticsMonthBookings" class="text-lg font-semibold text-slate-900">0</span>
+                <span class="text-[11px] text-slate-400">Current calendar month</span>
+              </div>
+
+              <!-- Month revenue -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">This month — revenue</span>
+                <span id="analyticsMonthRevenue" class="text-lg font-semibold text-slate-900">₹0</span>
+                <span class="text-[11px] text-slate-400">Current calendar month</span>
+              </div>
+
+              <!-- Week bookings -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">This week — bookings</span>
+                <span id="analyticsWeekBookings" class="text-lg font-semibold text-slate-900">0</span>
+                <span class="text-[11px] text-slate-400">Mon – Sun</span>
+              </div>
+
+              <!-- Week revenue -->
+              <div class="rounded-xl border border-slate-200 bg-white p-3 flex flex-col gap-1 shadow-sm">
+                <span class="text-[11px] uppercase tracking-wide text-slate-500">This week — revenue</span>
+                <span id="analyticsWeekRevenue" class="text-lg font-semibold text-slate-900">₹0</span>
+                <span class="text-[11px] text-slate-400">Mon – Sun</span>
+              </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid gap-4 lg:grid-cols-2">
+              <!-- Revenue trend -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Revenue trend</h3>
+                    <p class="text-[11px] text-slate-500">Last 30 days (₹)</p>
+                  </div>
+                </div>
+                <div class="mt-2 flex-1 min-h-[220px]">
+                  <canvas id="revChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Hourly occupancy -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Hourly occupancy</h3>
+                    <p class="text-[11px] text-slate-500">Bookings by start time</p>
+                  </div>
+                </div>
+                <div class="mt-2 flex-1 min-h-[220px]">
+                  <canvas id="occChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Court share -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Court share</h3>
+                    <p class="text-[11px] text-slate-500">Bookings by court</p>
+                  </div>
+                </div>
+                <div class="mt-2 flex-1 min-h-[220px] flex items-center justify-center">
+                  <canvas id="courtChart"></canvas>
+                </div>
+              </div>
+
+              <!-- Weekday distribution -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 flex flex-col gap-2 shadow-sm">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <h3 class="text-sm font-semibold text-slate-900">Weekday distribution</h3>
+                    <p class="text-[11px] text-slate-500">Bookings Sun–Sat</p>
+                  </div>
+                </div>
+                <div class="mt-2 flex-1 min-h-[220px]">
+                  <canvas id="weekdayChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-400 mt-1">
+              Charts use Chart.js and aggregate Firestore bookings from the last 90 days.
+            </p>
           </section>
 
           <!-- VIEW: NOTIFICATIONS (global log) -->
           <section id="viewNotifications" class="flex-1 min-h-0 hidden flex-col gap-3">
-            <!-- ... unchanged ... -->
+            <div class="flex items-center justify-between text-xs sm:text-sm">
+              <div>
+                <h2 class="text-sm font-semibold text-slate-900">Notification log</h2>
+                <p class="text-[11px] text-slate-500">
+                  SMS / WhatsApp / in-app notifications generated by booking events.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  id="markAllRead"
+                  class="px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+                >
+                  Mark all as read
+                </button>
+                <button
+                  id="clearNotifs"
+                  class="px-3 py-1.5 rounded-lg border border-rose-200 text-rose-600 bg-rose-50 hover:bg-rose-100"
+                >
+                  Clear log
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="adminNotifs"
+              class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-200 bg-white divide-y divide-slate-100 text-xs sm:text-sm"
+            >
+              <!-- Notification rows rendered by JS (e.g. from Firestore logs) -->
+            </div>
+
+            <p class="text-[11px] text-slate-400 mt-1">
+              This log is for internal tracking only. Make sure your backend writes notification events here.
+            </p>
           </section>
         </div>
       </main>
