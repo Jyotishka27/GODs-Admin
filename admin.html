@@ -7,138 +7,428 @@
   <link rel="icon" href="./assets/logo.svg" type="image/svg+xml"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; }
+    body {
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
     .notification-dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
   </style>
 </head>
-<body class="bg-white text-gray-900">
-  <!-- Header -->
-  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b">
-    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a class="flex items-center gap-2" href="./index.html">
-        <img src="./assets/Logo_RED.jpg" alt="logo" class="h-9 w-9">
-        <span class="font-bold">Admin — <span id="bizName">GODs Turf</span></span>
+<body class="bg-slate-950 text-slate-50 h-screen overflow-hidden">
+  <!-- App Shell -->
+  <div class="flex flex-col h-full">
+    <!-- Header -->
+    <header class="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+      <a class="flex items-center gap-3" href="./index.html">
+        <img src="./assets/Logo_RED.jpg" alt="logo" class="h-9 w-9 rounded-lg shadow-sm">
+        <div class="flex flex-col">
+          <span class="text-sm font-semibold tracking-tight text-slate-100">Admin Console</span>
+          <span class="text-xs text-slate-400" id="bizName">GODs Turf</span>
+        </div>
       </a>
 
       <div class="flex items-center gap-4">
-        <!-- 🔔 Notification badge -->
+        <!-- Notification bell -->
         <div class="relative">
-          <button id="notifBell" class="p-2 rounded-full hover:bg-gray-100 transition">
-            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          <button
+            id="notifBell"
+            class="p-2 rounded-full hover:bg-slate-800 transition flex items-center justify-center"
+          >
+            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+              </path>
             </svg>
-            <span id="notifBadge" class="notification-dot absolute -top-1 -right-1 h-3 w-3 bg-red-500 border-2 border-white rounded-full hidden"></span>
+            <span
+              id="notifBadge"
+              class="notification-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-rose-500 border-2 border-slate-950 rounded-full hidden">
+            </span>
           </button>
         </div>
 
-        <!-- 👤 Logged-in user email -->
-        <span id="adminEmail" class="text-sm text-gray-600"></span>
+        <!-- Logged-in admin -->
+        <div class="hidden sm:flex flex-col items-end">
+          <span id="adminEmail" class="text-xs text-slate-300"></span>
+          <span class="text-[11px] text-slate-500">Firebase Auth</span>
+        </div>
 
-        <!-- 🔴 Logout button -->
-        <button id="logoutBtn"
-          class="px-3 py-2 rounded-xl border border-red-300 text-red-600 hover:bg-red-50 transition font-medium">
+        <!-- Logout -->
+        <button
+          id="logoutBtn"
+          class="px-3 py-1.5 rounded-xl border border-rose-400/60 text-rose-200 text-sm hover:bg-rose-500/10 hover:border-rose-400 transition font-medium"
+        >
           Logout
         </button>
       </div>
-    </div>
-  </header>
+    </header>
 
-  <!-- Main content -->
-  <main class="max-w-6xl mx-auto px-4 py-8">
-    <div class="mb-6 flex gap-2">
-      <button id="tabBookings" class="px-3 py-2 rounded-xl bg-emerald-600 text-white">Bookings</button>
-      <button id="tabWaitlist" class="px-3 py-2 rounded-xl border">Waitlist</button>
-      <button id="tabNotifications" class="px-3 py-2 rounded-xl border">Notifications</button>
-    </div>
+    <!-- Body: Sidebar + Main -->
+    <div class="flex-1 flex min-h-0">
+      <!-- Sidebar -->
+      <aside class="w-56 border-r border-slate-800 bg-slate-950/90 hidden sm:flex flex-col">
+        <div class="px-4 py-3">
+          <p class="text-xs font-semibold tracking-wide text-slate-400 uppercase mb-2">Views</p>
+          <nav class="space-y-1 text-sm">
+            <button
+              id="navInbox"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-slate-800 text-slate-50 font-medium justify-start"
+              data-view="inbox"
+            >
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10">
+                <!-- Inbox icon -->
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4h4m-9 0a3 3 0 003 3h4a3 3 0 003-3m-10 0V5a2 2 0 012-2h4a2 2 0 012 2v6">
+                  </path>
+                </svg>
+              </span>
+              <div class="flex flex-col items-start">
+                <span>Requests</span>
+                <span class="text-[11px] text-slate-400">Bookings & waitlist</span>
+              </div>
+            </button>
 
-    <!-- Controls -->
-    <div id="controls" class="mb-6 flex flex-wrap items-end gap-3">
-      <div class="flex gap-2 items-end">
-        <label class="text-sm text-gray-600">Date</label>
-        <input id="filterDate" type="date" class="border rounded-xl px-3 py-2"/>
-      </div>
+            <button
+              id="navCalendar"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              data-view="calendar"
+            >
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/10">
+                <!-- Calendar icon -->
+                <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
+                  </path>
+                </svg>
+              </span>
+              <div class="flex flex-col items-start">
+                <span>Calendar</span>
+                <span class="text-[11px] text-slate-400">Teams-style schedule</span>
+              </div>
+            </button>
 
-      <div class="flex gap-2 items-end">
-        <label class="text-sm text-gray-600">Court</label>
-        <select id="filterCourt" class="border rounded-xl px-3 py-2">
-          <option value="">All courts</option>
-        </select>
-      </div>
+            <button
+              id="navAnalytics"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              data-view="analytics"
+            >
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10">
+                <!-- Analytics icon -->
+                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 19V6m4 13V10M7 19v-4">
+                  </path>
+                </svg>
+              </span>
+              <div class="flex flex-col items-start">
+                <span>Analytics</span>
+                <span class="text-[11px] text-slate-400">Coming soon</span>
+              </div>
+            </button>
 
-      <!-- STATUS FILTER -->
-      <div class="flex gap-2 items-end">
-        <label class="text-sm text-gray-600">Status</label>
-        <select id="filterStatus" class="border rounded-xl px-3 py-2">
-          <option value="">All</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-        </select>
-      </div>
-
-      <button id="exportCsv" class="px-3 py-2 rounded-xl bg-emerald-600 text-white">Export CSV</button>
-      <button id="clearAll" class="px-3 py-2 rounded-xl border text-red-600">Delete All Bookings</button>
-      <button id="refreshBtn" class="px-3 py-2 rounded-xl border">Refresh</button>
-    </div>
-
-    <!-- Bookings table -->
-    <section id="bookingsSection" class="mb-8">
-      <div class="overflow-auto border rounded-2xl">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 text-left">ID</th>
-              <th class="px-3 py-2 text-left">Status</th>
-              <th class="px-3 py-2 text-left">Court</th>
-              <th class="px-3 py-2 text-left">Date</th>
-              <th class="px-3 py-2 text-left">Start</th>
-              <th class="px-3 py-2 text-left">Customer</th>
-              <th class="px-3 py-2 text-left">Amount</th>
-              <th class="px-3 py-2 text-left">Notes</th>
-              <th class="px-3 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Waitlist -->
-    <section id="waitlistSection" class="hidden mb-8">
-      <h2 class="font-semibold mb-2">Waitlist</h2>
-      <div class="overflow-auto border rounded-2xl">
-        <table class="min-w-full text-sm">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-3 py-2 text-left">ID</th>
-              <th class="px-3 py-2 text-left">Court</th>
-              <th class="px-3 py-2 text-left">Date</th>
-              <th class="px-3 py-2 text-left">Time</th>
-              <th class="px-3 py-2 text-left">Customer</th>
-              <th class="px-3 py-2 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="wlRows"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Notifications -->
-    <section id="notificationsSection" class="hidden mb-8">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="font-semibold">🔔 Notifications</h2>
-        <div class="flex gap-2">
-          <button id="markAllRead" class="px-3 py-1 rounded-xl border text-sm">Mark all read</button>
-          <button id="clearNotifs" class="px-3 py-1 rounded-xl border text-sm text-red-600">Clear all</button>
+            <button
+              id="navNotifications"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              data-view="notifications"
+            >
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/10">
+                <!-- Bell icon -->
+                <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                  </path>
+                </svg>
+              </span>
+              <div class="flex flex-col items-start">
+                <span>Notifications</span>
+                <span class="text-[11px] text-slate-400">Logs & alerts</span>
+              </div>
+            </button>
+          </nav>
         </div>
-      </div>
-      <div id="adminNotifs" class="max-h-96 overflow-auto border rounded-2xl space-y-2 p-4 bg-gray-50/50">
-        <!-- Notifications will be populated here -->
-      </div>
-    </section>
+      </aside>
 
-    <p class="text-xs text-gray-500 mt-2">* Demo admin uses Firebase Auth + Firestore. Wire backend rules for production.</p>
-  </main>
+      <!-- Main Content Area -->
+      <main class="flex-1 min-w-0 bg-slate-900/60">
+        <div class="h-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col gap-4">
+          <!-- Top bar inside main -->
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h1 class="text-lg sm:text-xl font-semibold text-slate-50 flex items-center gap-2">
+                <span id="viewTitle">Requests</span>
+                <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                  Admin view
+                </span>
+              </h1>
+              <p class="text-xs text-slate-400 mt-1">
+                Manage booking requests, monitor slots, and keep track of notifications.
+              </p>
+            </div>
+          </div>
+
+          <!-- VIEW: INBOX (Outlook-style) -->
+          <section id="viewInbox" class="flex-1 min-h-0 flex flex-col gap-3">
+            <!-- Sub-tabs inside Inbox -->
+            <div class="flex flex-wrap items-center gap-2 text-sm">
+              <button
+                id="tabBookings"
+                class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-900 font-medium shadow-sm"
+              >
+                Bookings
+              </button>
+              <button
+                id="tabWaitlist"
+                class="px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 hover:bg-slate-700"
+              >
+                Waitlist
+              </button>
+              <button
+                id="tabNotificationsInner"
+                class="px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 hover:bg-slate-700"
+              >
+                Notifications
+              </button>
+            </div>
+
+            <!-- Filters + Actions -->
+            <div id="controls" class="flex flex-wrap items-end gap-3 text-xs sm:text-sm">
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-400">Date</label>
+                <input
+                  id="filterDate"
+                  type="date"
+                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-400">Court</label>
+                <select
+                  id="filterCourt"
+                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="">All courts</option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-400">Status</label>
+                <select
+                  id="filterStatus"
+                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="">All</option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div class="flex-1"></div>
+
+              <div class="flex flex-wrap gap-2">
+                <button
+                  id="exportCsv"
+                  class="px-3 py-1.5 rounded-lg bg-emerald-600 text-slate-50 text-xs sm:text-sm hover:bg-emerald-500 font-medium"
+                >
+                  Export CSV
+                </button>
+                <button
+                  id="clearAll"
+                  class="px-3 py-1.5 rounded-lg border border-rose-500/60 text-rose-200 text-xs sm:text-sm hover:bg-rose-500/10"
+                >
+                  Delete All Bookings
+                </button>
+                <button
+                  id="refreshBtn"
+                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs sm:text-sm hover:bg-slate-800/80"
+                >
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <!-- Outlook-style 2-column layout -->
+            <div class="flex-1 min-h-0 flex gap-3">
+              <!-- LEFT: list of bookings / waitlist / notifications -->
+              <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col min-h-0">
+                <div class="flex items-center justify-between mb-2 text-xs text-slate-400">
+                  <span id="listTitle">Booking requests</span>
+                  <span id="listCount" class="text-[11px] text-slate-500">0 items</span>
+                </div>
+
+                <div
+                  id="bookingList"
+                  class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 divide-y divide-slate-800"
+                >
+                  <!-- admin.js will render rows here as cards -->
+                </div>
+              </div>
+
+              <!-- RIGHT: detail pane -->
+              <div class="hidden sm:flex flex-1 min-h-0">
+                <div class="flex-1 rounded-xl border border-slate-800 bg-slate-950/60 p-4 flex flex-col gap-3">
+                  <div class="flex items-start justify-between gap-3">
+                    <div>
+                      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Selected booking</p>
+                      <h2 id="detailTitle" class="text-sm sm:text-base font-semibold text-slate-50">
+                        No booking selected
+                      </h2>
+                      <p id="detailSubtitle" class="text-xs text-slate-400 mt-1">
+                        Pick a booking from the left to view full details, approve or cancel.
+                      </p>
+                    </div>
+                    <div id="detailStatusPill" class="text-[11px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">
+                      —
+                    </div>
+                  </div>
+
+                  <div
+                    id="detailBody"
+                    class="mt-2 flex-1 text-xs sm:text-sm text-slate-200 space-y-2 overflow-y-auto"
+                  >
+                    <!-- Populated by admin.js -->
+                  </div>
+
+                  <div class="pt-3 mt-2 border-t border-slate-800 flex flex-wrap gap-2">
+                    <button
+                      id="detailApprove"
+                      class="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs sm:text-sm text-slate-50 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled
+                    >
+                      Confirm booking
+                    </button>
+                    <button
+                      id="detailCancel"
+                      class="px-3 py-1.5 rounded-lg bg-rose-600 text-xs sm:text-sm text-slate-50 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled
+                    >
+                      Cancel booking
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-500 mt-2">
+              * Demo admin uses Firebase Auth + Firestore. Wire backend rules for production.
+            </p>
+          </section>
+
+          <!-- VIEW: CALENDAR (Teams-style placeholder) -->
+          <section id="viewCalendar" class="flex-1 min-h-0 hidden flex-col gap-3">
+            <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-400">Court</label>
+                <select
+                  id="calendarCourt"
+                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                >
+                  <option value="">All courts</option>
+                </select>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] font-medium text-slate-400">View</label>
+                <div class="inline-flex rounded-lg border border-slate-700 bg-slate-900/80 overflow-hidden">
+                  <button
+                    id="calendarViewDay"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-100 bg-slate-800"
+                  >
+                    Day
+                  </button>
+                  <button
+                    id="calendarViewWeek"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-300 hover:bg-slate-800"
+                  >
+                    Week
+                  </button>
+                  <button
+                    id="calendarViewMonth"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-300 hover:bg-slate-800"
+                  >
+                    Month
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex-1"></div>
+
+              <div class="flex items-center gap-2">
+                <button
+                  id="calendarPrev"
+                  class="px-2 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs hover:bg-slate-800"
+                >
+                  ‹
+                </button>
+                <button
+                  id="calendarToday"
+                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs sm:text-sm hover:bg-slate-800"
+                >
+                  Today
+                </button>
+                <button
+                  id="calendarNext"
+                  class="px-2 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs hover:bg-slate-800"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="calendarGrid"
+              class="flex-1 min-h-0 rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs sm:text-sm text-slate-100 flex items-center justify-center"
+            >
+              <p class="text-slate-500 text-xs sm:text-sm px-4 text-center">
+                Calendar view placeholder. We’ll hook this to a Teams-style calendar (e.g. FullCalendar)
+                in <code>admin.js</code> and render booked slots as meeting-style blocks.
+              </p>
+            </div>
+          </section>
+
+          <!-- VIEW: ANALYTICS (placeholder) -->
+          <section id="viewAnalytics" class="flex-1 min-h-0 hidden flex-col gap-4">
+            <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
+              <h2 class="text-sm sm:text-base font-semibold text-slate-50 mb-1">Analytics (coming soon)</h2>
+              <p class="text-xs sm:text-sm text-slate-400">
+                This space will show court utilization, peak hours, daily/weekly revenue, and repeat customers once
+                we wire metrics from Firestore.
+              </p>
+            </div>
+          </section>
+
+          <!-- VIEW: NOTIFICATIONS (global log) -->
+          <section id="viewNotifications" class="flex-1 min-h-0 hidden flex-col gap-3">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-sm sm:text-base font-semibold text-slate-50">Notifications</h2>
+              <div class="flex gap-2 text-xs sm:text-sm">
+                <button
+                  id="markAllRead"
+                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 hover:bg-slate-800"
+                >
+                  Mark all read
+                </button>
+                <button
+                  id="clearNotifs"
+                  class="px-3 py-1.5 rounded-lg border border-rose-500/60 text-rose-200 hover:bg-rose-500/10"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+
+            <div
+              id="adminNotifs"
+              class="flex-1 min-h-0 max-h-full overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 space-y-2 p-4"
+            >
+              <!-- Notifications will be populated here -->
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
 
   <!-- Main Admin Logic -->
   <script type="module" src="./scripts/admin.js"></script>
