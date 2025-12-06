@@ -69,7 +69,15 @@ function clearSelectionUI() {
   selectedType = null;
   if (bookingListEl) {
     bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
-      n.classList.remove("bg-slate-800/80", "border-l-2", "border-emerald-400");
+      n.classList.remove(
+        "bg-gray-100",
+        "dark:bg-slate-800",
+        "border-l-2",
+        "border-brand",
+        "dark:border-emerald-400",
+        "bg-slate-800/80",
+        "border-emerald-400"
+      );
     });
   }
   if (detailTitleEl) detailTitleEl.textContent = "No booking selected";
@@ -107,7 +115,7 @@ function renderBookingsList(bookings) {
   if (!bookings.length) {
     const empty = el(
       "div",
-      "text-xs sm:text-sm text-slate-500 px-3 py-4 text-center"
+      "text-xs sm:text-sm text-gray-500 dark:text-slate-500 px-3 py-4 text-center"
     );
     empty.textContent = "No bookings for this date.";
     bookingListEl.appendChild(empty);
@@ -122,7 +130,12 @@ function renderBookingsList(bookings) {
 
     const row = el(
       "button",
-      "w-full text-left px-3 py-2 sm:py-2.5 border-b border-slate-800 hover:bg-slate-800/60 flex flex-col gap-1 focus:outline-none"
+      [
+        "w-full text-left px-3 py-2 sm:py-2.5",
+        "border-b border-gray-200 hover:bg-gray-50",
+        "flex flex-col gap-1 focus:outline-none",
+        "dark:border-slate-800 dark:hover:bg-slate-800/60"
+      ].join(" ")
     );
     row.dataset.rowId = b._id;
     row.dataset.type = "booking";
@@ -132,10 +145,10 @@ function renderBookingsList(bookings) {
     const amount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
 
     const statusPillClass = isConfirmed
-      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40"
       : isCancelled
-      ? "bg-rose-500/15 text-rose-300 border-rose-500/40"
-      : "bg-amber-500/15 text-amber-200 border-amber-500/40";
+      ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/40"
+      : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40";
 
     const statusLabel = isConfirmed
       ? "Confirmed"
@@ -149,22 +162,24 @@ function renderBookingsList(bookings) {
           <span class="inline-flex items-center px-2 py-0.5 rounded-full border ${statusPillClass} text-[10px] font-medium">
             ${escapeHtml(statusLabel)}
           </span>
-          <span class="text-xs sm:text-sm text-slate-100 font-medium">${escapeHtml(range || "—")}</span>
+          <span class="text-xs sm:text-sm text-gray-900 dark:text-slate-100 font-medium">
+            ${escapeHtml(range || "—")}
+          </span>
         </div>
-        <div class="text-xs sm:text-sm text-slate-200 font-medium">
+        <div class="text-xs sm:text-sm text-gray-900 dark:text-slate-200 font-medium">
           ₹${amount.toLocaleString("en-IN")}
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-1 mt-1">
-        <div class="text-[11px] sm:text-xs text-slate-300">
+        <div class="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300">
           ${escapeHtml(b.userName || b.name || "Guest")}
           ${
             b.phone
-              ? `<span class="text-slate-500"> · ${escapeHtml(String(b.phone))}</span>`
+              ? `<span class="text-gray-400 dark:text-slate-500"> · ${escapeHtml(String(b.phone))}</span>`
               : ""
           }
         </div>
-        <div class="text-[11px] sm:text-xs text-slate-500">
+        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
           ${escapeHtml(b.date || "")} · ${escapeHtml(courtLabel)}
         </div>
       </div>
@@ -175,9 +190,18 @@ function renderBookingsList(bookings) {
       selectedType = "booking";
 
       bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
-        n.classList.remove("bg-slate-800/80", "border-l-2", "border-emerald-400");
+        n.classList.remove(
+          "bg-gray-100",
+          "dark:bg-slate-800",
+          "border-l-2",
+          "border-brand",
+          "dark:border-emerald-400",
+          "bg-slate-800/80", // old classes (safe to remove too)
+          "border-emerald-400"
+        );
       });
-      row.classList.add("bg-slate-800/80", "border-l-2", "border-emerald-400");
+
+      row.classList.add("bg-gray-100", "dark:bg-slate-800", "border-l-2", "border-brand", "dark:border-emerald-400");
 
       showBookingDetail(b);
     });
@@ -185,7 +209,7 @@ function renderBookingsList(bookings) {
     bookingListEl.appendChild(row);
   });
 
-  clearSelectionUI(); // reset detail; click will re-select
+  clearSelectionUI(); // reset detail (selection happens when clicking)
 }
 
 function renderWaitlistList(wls) {
@@ -200,7 +224,7 @@ function renderWaitlistList(wls) {
   if (!wls.length) {
     const empty = el(
       "div",
-      "text-xs sm:text-sm text-slate-500 px-3 py-4 text-center"
+      "text-xs sm:text-sm text-gray-500 dark:text-slate-500 px-3 py-4 text-center"
     );
     empty.textContent = "No waitlist entries for this date.";
     bookingListEl.appendChild(empty);
@@ -211,7 +235,12 @@ function renderWaitlistList(wls) {
   wls.forEach((w) => {
     const row = el(
       "button",
-      "w-full text-left px-3 py-2 sm:py-2.5 border-b border-slate-800 hover:bg-slate-800/60 flex flex-col gap-1 focus:outline-none"
+      [
+        "w-full text-left px-3 py-2 sm:py-2.5",
+        "border-b border-gray-200 hover:bg-gray-50",
+        "flex flex-col gap-1 focus:outline-none",
+        "dark:border-slate-800 dark:hover:bg-slate-800/60"
+      ].join(" ")
     );
     row.dataset.rowId = w._id;
     row.dataset.type = "waitlist";
@@ -222,25 +251,28 @@ function renderWaitlistList(wls) {
     row.innerHTML = `
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-slate-500/20 text-slate-100 border-slate-500/40 text-[10px] font-medium">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-medium
+                      dark:bg-slate-500/20 dark:text-slate-100 dark:border-slate-500/40">
             WAITLIST
           </span>
-          <span class="text-xs sm:text-sm text-slate-100 font-medium">${escapeHtml(range || "—")}</span>
+          <span class="text-xs sm:text-sm text-gray-900 dark:text-slate-100 font-medium">
+            ${escapeHtml(range || "—")}
+          </span>
         </div>
-        <div class="text-[11px] sm:text-xs text-slate-400">
+        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
           ${escapeHtml(w.date || "")}
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-1 mt-1">
-        <div class="text-[11px] sm:text-xs text-slate-300">
+        <div class="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300">
           ${escapeHtml(w.userName || w.name || "Guest")}
           ${
             w.phone
-              ? `<span class="text-slate-500"> · ${escapeHtml(String(w.phone))}</span>`
+              ? `<span class="text-gray-400 dark:text-slate-500"> · ${escapeHtml(String(w.phone))}</span>`
               : ""
           }
         </div>
-        <div class="text-[11px] sm:text-xs text-slate-500">
+        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
           ${escapeHtml(courtLabel)}
         </div>
       </div>
@@ -251,9 +283,18 @@ function renderWaitlistList(wls) {
       selectedType = "waitlist";
 
       bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
-        n.classList.remove("bg-slate-800/80", "border-l-2", "border-emerald-400");
+        n.classList.remove(
+          "bg-gray-100",
+          "dark:bg-slate-800",
+          "border-l-2",
+          "border-brand",
+          "dark:border-emerald-400",
+          "bg-slate-800/80",
+          "border-emerald-400"
+        );
       });
-      row.classList.add("bg-slate-800/80", "border-l-2", "border-emerald-400");
+
+      row.classList.add("bg-gray-100", "dark:bg-slate-800", "border-l-2", "border-brand", "dark:border-emerald-400");
 
       showWaitlistDetail(w);
     });
