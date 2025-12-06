@@ -36,7 +36,7 @@
   </style>
 </head>
 
-<!-- ✅ allow page to scroll; no overflow-hidden -->
+<!-- allow full-page scroll -->
 <body class="bg-shell text-slate-900 min-h-screen">
   <!-- App Shell -->
   <div class="flex flex-col min-h-screen">
@@ -51,11 +51,12 @@
       </a>
 
       <div class="flex items-center gap-4">
-        <!-- Notification bell -->
+        <!-- Notification bell + mobile nav dropdown -->
         <div class="relative">
           <button
             id="notifBell"
             class="p-2 rounded-full hover:bg-slate-100 transition flex items-center justify-center"
+            type="button"
           >
             <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -67,6 +68,41 @@
               class="notification-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-rose-500 border-2 border-white rounded-full hidden">
             </span>
           </button>
+
+          <!-- ✅ Mobile nav panel opened by bell -->
+          <div
+            id="mobileNavPanel"
+            class="absolute right-0 mt-2 w-40 rounded-xl border border-slate-200 bg-white shadow-lg text-xs text-slate-700 hidden sm:hidden"
+          >
+            <button
+              class="w-full text-left px-3 py-2 hover:bg-slate-50"
+              data-view="inbox"
+              type="button"
+            >
+              Requests
+            </button>
+            <button
+              class="w-full text-left px-3 py-2 hover:bg-slate-50"
+              data-view="calendar"
+              type="button"
+            >
+              Calendar
+            </button>
+            <button
+              class="w-full text-left px-3 py-2 hover:bg-slate-50"
+              data-view="analytics"
+              type="button"
+            >
+              Analytics
+            </button>
+            <button
+              class="w-full text-left px-3 py-2 hover:bg-slate-50"
+              data-view="notifications"
+              type="button"
+            >
+              Notifications
+            </button>
+          </div>
         </div>
 
         <!-- Logged-in admin -->
@@ -186,34 +222,6 @@
             </div>
           </div>
 
-          <!-- Mobile nav tabs -->
-          <div class="sm:hidden -mb-1 flex gap-2 overflow-x-auto text-xs pt-1 pb-2">
-            <button
-              class="px-3 py-1.5 rounded-full bg-brand-soft text-slate-900 font-medium whitespace-nowrap"
-              data-view="inbox"
-            >
-              Requests
-            </button>
-            <button
-              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
-              data-view="calendar"
-            >
-              Calendar
-            </button>
-            <button
-              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
-              data-view="analytics"
-            >
-              Analytics
-            </button>
-            <button
-              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
-              data-view="notifications"
-            >
-              Notifications
-            </button>
-          </div>
-
           <!-- VIEW: INBOX (Requests) -->
           <section id="viewInbox" class="flex-1 flex flex-col gap-3">
             <!-- Sub-tabs inside Inbox -->
@@ -300,7 +308,7 @@
               </div>
             </div>
 
-            <!-- Outlook-style layout: stacked on mobile, 2-column on desktop -->
+            <!-- Layout: stacked on mobile, 2-column on desktop -->
             <div class="flex flex-col sm:flex-row gap-3">
               <!-- LEFT: list -->
               <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col">
