@@ -86,7 +86,7 @@
 
     <!-- Body: Sidebar + Main -->
     <div class="flex-1 flex min-h-0">
-      <!-- Sidebar -->
+      <!-- Sidebar (desktop / tablet) -->
       <aside class="w-56 border-r border-slate-200 bg-white hidden sm:flex flex-col">
         <div class="px-4 py-3">
           <p class="text-xs font-semibold tracking-wide text-slate-500 uppercase mb-2">Views</p>
@@ -112,7 +112,7 @@
 
             <button
               id="navCalendar"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-100 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-transparent text-slate-700 hover:bg-slate-100 justify-start"
               data-view="calendar"
             >
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-50">
@@ -130,7 +130,7 @@
 
             <button
               id="navAnalytics"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-100 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-transparent text-slate-700 hover:bg-slate-100 justify-start"
               data-view="analytics"
             >
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-50">
@@ -148,7 +148,7 @@
 
             <button
               id="navNotifications"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 hover:bg-slate-100 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-transparent text-slate-700 hover:bg-slate-100 justify-start"
               data-view="notifications"
             >
               <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-rose-50">
@@ -183,6 +183,34 @@
                 Manage booking requests, monitor slots, view analytics, and keep track of notifications.
               </p>
             </div>
+          </div>
+
+          <!-- Mobile nav tabs -->
+          <div class="sm:hidden -mb-1 flex gap-2 overflow-x-auto text-xs pt-1 pb-2">
+            <button
+              class="px-3 py-1.5 rounded-full bg-brand-soft text-slate-900 font-medium whitespace-nowrap"
+              data-view="inbox"
+            >
+              Requests
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
+              data-view="calendar"
+            >
+              Calendar
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
+              data-view="analytics"
+            >
+              Analytics
+            </button>
+            <button
+              class="px-3 py-1.5 rounded-full bg-transparent text-slate-700 border border-slate-200 whitespace-nowrap"
+              data-view="notifications"
+            >
+              Notifications
+            </button>
           </div>
 
           <!-- VIEW: INBOX (Requests) -->
@@ -271,8 +299,8 @@
               </div>
             </div>
 
-            <!-- Outlook-style 2-column layout -->
-            <div class="flex-1 min-h-0 flex gap-3">
+            <!-- Outlook-style layout: stacked on mobile, 2-column on desktop -->
+            <div class="flex-1 min-h-0 flex flex-col sm:flex-row gap-3">
               <!-- LEFT: list -->
               <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col min-h-0">
                 <div class="flex items-center justify-between mb-2 text-xs text-slate-500">
@@ -288,8 +316,8 @@
                 </div>
               </div>
 
-              <!-- RIGHT: detail pane -->
-              <div class="hidden sm:flex flex-1 min-h-0">
+              <!-- RIGHT: detail pane (visible on mobile too, stacked below list) -->
+              <div class="flex flex-1 min-h-0">
                 <div class="flex-1 rounded-xl border bg-white border-slate-200 p-4 flex flex-col gap-3 shadow-sm">
                   <div class="flex items-start justify-between gap-3">
                     <div>
@@ -316,9 +344,9 @@
                     <!-- Populated by Requests JS -->
                   </div>
 
-                  <!-- ✅ ACTION BAR: side-by-side buttons -->
+                  <!-- ACTION BAR -->
                   <div class="pt-4 mt-4 border-t border-slate-200">
-                    <div class="flex items-center justify-end gap-3">
+                    <div class="flex flex-wrap sm:flex-nowrap items-center justify-end gap-3">
                       <button
                         id="detailApprove"
                         class="px-5 py-2 rounded-lg bg-[#0ba86b] text-white text-sm font-medium
@@ -339,7 +367,7 @@
                       </button>
                     </div>
                   </div>
-                  <!-- ✅ END ACTION BAR -->
+                  <!-- END ACTION BAR -->
                 </div>
               </div>
             </div>
