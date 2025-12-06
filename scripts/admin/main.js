@@ -38,7 +38,7 @@ function setActiveView(view) {
     viewTitleEl.textContent = titles[view];
   }
 
-  // Update nav buttons (sidebar + mobile) based on data-view
+  // Update nav buttons (sidebar + mobile dropdown) based on data-view
   const navButtons = document.querySelectorAll("[data-view]");
   navButtons.forEach((btn) => {
     const isActive = btn.dataset.view === view;
@@ -63,20 +63,41 @@ function initNav() {
   const adminNotifs = $id("adminNotifs");
   const markAllReadBtn = $id("markAllRead");
   const clearNotifsBtn = $id("clearNotifs");
+  const mobileNavPanel = $id("mobileNavPanel");
 
-  // All nav buttons (desktop sidebar + mobile tabs)
+  // All nav buttons (desktop sidebar + mobile dropdown)
   const navButtons = document.querySelectorAll("[data-view]");
   navButtons.forEach((btn) => {
     const view = btn.dataset.view;
     if (!view) return;
-    btn.addEventListener("click", () => setActiveView(view));
+    btn.addEventListener("click", () => {
+      setActiveView(view);
+
+      // Close mobile menu if open
+      if (mobileNavPanel) {
+        mobileNavPanel.classList.add("hidden");
+      }
+
+      if (view === "notifications" && notifBadge) {
+        notifBadge.classList.add("hidden");
+      }
+    });
   });
 
-  // Bell jumps to notifications
+  // Notification bell
   notifBell &&
     notifBell.addEventListener("click", () => {
-      setActiveView("notifications");
-      if (notifBadge) notifBadge.classList.add("hidden");
+      // Desktop / tablet: go directly to notifications
+      if (window.matchMedia("(min-width: 640px)").matches) {
+        setActiveView("notifications");
+        notifBadge && notifBadge.classList.add("hidden");
+        return;
+      }
+
+      // Mobile: toggle dropdown menu
+      if (mobileNavPanel) {
+        mobileNavPanel.classList.toggle("hidden");
+      }
     });
 
   // Notifications view controls
@@ -95,6 +116,20 @@ function initNav() {
       adminNotifs.innerHTML = "";
       notifBadge && notifBadge.classList.add("hidden");
     });
+
+  // Optional: click outside to close mobile menu
+  document.addEventListener("click", (evt) => {
+    if (!mobileNavPanel || mobileNavPanel.classList.contains("hidden")) return;
+    const target = evt.target;
+    if (
+      target instanceof Element &&
+      !mobileNavPanel.contains(target) &&
+      target.id !== "notifBell" &&
+      !target.closest("#notifBell")
+    ) {
+      mobileNavPanel.classList.add("hidden");
+    }
+  });
 }
 
 async function boot() {
