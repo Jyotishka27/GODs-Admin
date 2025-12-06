@@ -1,5 +1,5 @@
 // scripts/admin.js
-// Updated for new Outlook/Teams-style admin UI
+// Admin console with Outlook-style Requests view + Teams-style Calendar view
 
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
 import {
@@ -47,7 +47,7 @@ function el(tag, cls = "") {
 }
 
 /* ---------- UI elements ---------- */
-// Filters + actions
+// Filters + actions (Requests view)
 const filterDate = $id("filterDate");
 const filterCourt = $id("filterCourt");
 const filterStatus = $id("filterStatus");
@@ -93,7 +93,16 @@ const clearNotifsBtn = $id("clearNotifs");
 
 // Misc
 const bizNameEl = $id("bizName");
+
+// Calendar controls
 const calendarCourtSelect = $id("calendarCourt");
+const calendarViewDayBtn = $id("calendarViewDay");
+const calendarViewWeekBtn = $id("calendarViewWeek");
+const calendarViewMonthBtn = $id("calendarViewMonth");
+const calendarPrevBtn = $id("calendarPrev");
+const calendarNextBtn = $id("calendarNext");
+const calendarTodayBtn = $id("calendarToday");
+const calendarGridEl = $id("calendarGrid");
 
 /* ---------- State ---------- */
 let SITE_CFG = null;
@@ -103,6 +112,11 @@ let currentBookings = [];
 let currentWaitlist = [];
 let selectedId = null;
 let selectedType = null; // "booking" | "waitlist"
+
+// Calendar state
+let calendarView = "week";          // "day" | "week" | "month"
+let calendarBaseDate = new Date();  // anchor date for view
+let calendarBookings = [];
 
 /* ---------- Site config runtime ---------- */
 async function loadSiteCfg() {
@@ -166,7 +180,6 @@ function toast(msg, err = false) {
     }
 
     adminNotifs.prepend(p);
-    // show badge
     if (notifBadge) notifBadge.classList.remove("hidden");
     setTimeout(() => p.remove(), 12000);
   } else {
@@ -174,7 +187,7 @@ function toast(msg, err = false) {
   }
 }
 
-/* ---------- Time parsing/format helpers (robust) ---------- */
+/* ---------- Time helpers ---------- */
 function parseToDate(val) {
   if (val === undefined || val === null || val === "") return null;
   try {
@@ -209,7 +222,7 @@ function normalizeTimeToken(token) {
   if (/^\d{4}$/.test(token)) return `${token.slice(0, 2)}:${token.slice(2, 4)}`;
   if (/^\d{3}$/.test(token)) return `${token.slice(0, 1)}:${token.slice(1, 3)}`;
   if (/^\d{1,2}$/.test(token)) return `${String(token).padStart(2, "0")}:00`;
-  let m = token.match(/^(\d{1,2})(AM|PM)$/i);
+  const m = token.match(/^(\d{1,2})(AM|PM)$/i);
   if (m) return `${String(m[1]).padStart(2, "0")}${m[2].toUpperCase()}`;
   if (token.includes(":")) {
     const parts = token.split(":").map((s) => s.replace(/\D/g, ""));
@@ -235,7 +248,8 @@ function parseRangeFromLabel(label) {
   if (/[ap]m/i.test(left) && /[ap]m/i.test(right)) {
     const s = new Date(`2000-01-01 ${left}`);
     const e = new Date(`2000-01-01 ${right}`);
-    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime())) return `${formatDateTo12Hour(s)} – ${formatDateTo12Hour(e)}`;
+    if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime()))
+      return `${formatDateTo12Hour(s)} – ${formatDateTo12Hour(e)}`;
   }
   return null;
 }
@@ -348,6 +362,42 @@ function displayRangeForBooking(b) {
   return "—";
 }
 
+/* ---------- Date helpers for calendar ---------- */
+function addDays(date, n) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function startOfWeek(date) {
+  const d = new Date(date);
+  const js = d.getDay(); // 0=Sun..6=Sat
+  const diff = (js + 6) % 7; // make Monday=0
+  d.setDate(d.getDate() - diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function startOfMonth(date) {
+  const d = new Date(date.getFullYear(), date.getMonth(), 1);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfMonth(date) {
+  const d = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function sameDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
 /* ---------- Court label overrides ---------- */
 const COURT_LABEL_OVERRIDES = {
   "5A": "Half Ground (Left Half)",
@@ -363,7 +413,9 @@ function getCourtLabel(courtId) {
   const id = String(courtId).trim();
 
   if (SITE_CFG && Array.isArray(SITE_CFG.courts)) {
-    const found = SITE_CFG.courts.find((c) => String(c.id) === id || String(c.id).toLowerCase() === id.toLowerCase());
+    const found = SITE_CFG.courts.find(
+      (c) => String(c.id) === id || String(c.id).toLowerCase() === id.toLowerCase()
+    );
     if (found) {
       if (found.label) return String(found.label);
       if (found.name) return String(found.name);
@@ -392,12 +444,13 @@ function getCourtAmount(courtId) {
 /* ---------- Firestore reads ---------- */
 async function fetchBookings({ date, court, status } = {}) {
   try {
+    let constraints = [];
+    if (date) constraints.push(where("date", "==", date));
+    if (court) constraints.push(where("court", "==", court));
+    if (status) constraints.push(where("status", "==", status));
+
     let qRef = collection(db, "bookings");
-    const filters = [];
-    if (date) filters.push(where("date", "==", date));
-    if (court) filters.push(where("court", "==", court));
-    if (status) filters.push(where("status", "==", status));
-    if (filters.length) qRef = query(collection(db, "bookings"), ...filters);
+    if (constraints.length) qRef = query(collection(db, "bookings"), ...constraints);
 
     const snap = await getDocs(qRef);
     const items = [];
@@ -407,7 +460,9 @@ async function fetchBookings({ date, court, status } = {}) {
       items.push(data);
     });
     items.sort(
-      (a, b) => (a.slotId || "").localeCompare(b.slotId || "") || (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+      (a, b) =>
+        (a.slotId || "").localeCompare(b.slotId || "") ||
+        (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
     );
     return items;
   } catch (err) {
@@ -437,7 +492,37 @@ async function fetchWishlists({ date } = {}) {
   }
 }
 
-/* ---------- Renderers: list + detail ---------- */
+// For calendar: get bookings in a date range [startISO, endISO]
+async function fetchBookingsRange(startISO, endISO, court) {
+  try {
+    const constraints = [
+      where("date", ">=", startISO),
+      where("date", "<=", endISO)
+    ];
+    if (court) constraints.push(where("court", "==", court));
+
+    const qRef = query(collection(db, "bookings"), ...constraints);
+    const snap = await getDocs(qRef);
+    const items = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      data._id = d.id;
+      items.push(data);
+    });
+    items.sort((a, b) =>
+      String(a.date || "").localeCompare(String(b.date || "")) ||
+      (a.slotId || "").localeCompare(b.slotId || "") ||
+      (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+    );
+    return items;
+  } catch (err) {
+    console.error("fetchBookingsRange err", err);
+    toast("Failed to load calendar bookings", true);
+    return [];
+  }
+}
+
+/* ---------- Renderers: list + detail (Requests view) ---------- */
 
 function clearSelectionUI() {
   selectedId = null;
@@ -556,7 +641,7 @@ function renderBookingsList(bookings) {
     bookingListEl.appendChild(row);
   });
 
-  clearSelectionUI(); // reset detail
+  clearSelectionUI(); // reset detail (selection happens when clicking)
 }
 
 function renderWaitlistList(wls) {
@@ -632,7 +717,7 @@ function renderWaitlistList(wls) {
     bookingListEl.appendChild(row);
   });
 
-  clearSelectionUI(); // reset detail
+  clearSelectionUI();
 }
 
 /* ---------- Detail pane content ---------- */
@@ -743,11 +828,15 @@ If you have any questions, reply to this message. Thank you!`;
   if (detailStatusPillEl) {
     let pillClass =
       "text-[11px] px-2 py-1 rounded-full border border-slate-700 text-slate-400";
-    if (isConfirmed) pillClass = "text-[11px] px-2 py-1 rounded-full border border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
+    if (isConfirmed)
+      pillClass =
+        "text-[11px] px-2 py-1 rounded-full border border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
     else if (isCancelled)
-      pillClass = "text-[11px] px-2 py-1 rounded-full border border-rose-500/60 bg-rose-500/10 text-rose-300";
+      pillClass =
+        "text-[11px] px-2 py-1 rounded-full border border-rose-500/60 bg-rose-500/10 text-rose-300";
     else
-      pillClass = "text-[11px] px-2 py-1 rounded-full border border-amber-500/60 bg-amber-500/10 text-amber-200";
+      pillClass =
+        "text-[11px] px-2 py-1 rounded-full border border-amber-500/60 bg-amber-500/10 text-amber-200";
 
     detailStatusPillEl.className = pillClass;
     detailStatusPillEl.textContent = status.toUpperCase();
@@ -1040,7 +1129,7 @@ async function convertWishlistToBooking(wishlistId) {
       if (conflictExists) throw new Error("Slot already booked");
 
       const derivedAmount =
-        (wl.amount && Number(wl.amount)) ? Number(wl.amount) : getCourtAmount(wl.court);
+        wl.amount && Number(wl.amount) ? Number(wl.amount) : getCourtAmount(wl.court);
 
       const bookingRef = doc(collection(db, "bookings"));
       t.set(bookingRef, {
@@ -1080,7 +1169,7 @@ async function deleteWishlist(id) {
   }
 }
 
-/* ---------- Refresh & view wiring ---------- */
+/* ---------- Refresh & view wiring (Requests) ---------- */
 
 async function refreshCurrentView() {
   const date = filterDate?.value || fmtDateISO();
@@ -1100,7 +1189,6 @@ async function refreshCurrentView() {
   } else if (currentInboxTab === "waitlist") {
     renderWaitlistList(wishlist);
   } else if (currentInboxTab === "notifications") {
-    // For now, just show a message in the list
     if (bookingListEl) {
       bookingListEl.innerHTML = "";
       const info = el(
@@ -1115,6 +1203,350 @@ async function refreshCurrentView() {
     listTitleEl && (listTitleEl.textContent = "Notifications");
     listCountEl && (listCountEl.textContent = "");
   }
+}
+
+/* ---------- Calendar rendering ---------- */
+
+function updateCalendarViewButtons() {
+  if (!calendarViewDayBtn || !calendarViewWeekBtn || !calendarViewMonthBtn) return;
+
+  const buttons = [calendarViewDayBtn, calendarViewWeekBtn, calendarViewMonthBtn];
+  buttons.forEach((btn) => {
+    btn.classList.remove("bg-slate-800", "text-slate-100");
+    btn.classList.add("text-slate-300");
+  });
+
+  if (calendarView === "day") {
+    calendarViewDayBtn.classList.add("bg-slate-800", "text-slate-100");
+  } else if (calendarView === "week") {
+    calendarViewWeekBtn.classList.add("bg-slate-800", "text-slate-100");
+  } else if (calendarView === "month") {
+    calendarViewMonthBtn.classList.add("bg-slate-800", "text-slate-100");
+  }
+}
+
+function renderCalendarGrid(view, baseDate, startDate, endDate, bookings) {
+  if (!calendarGridEl) return;
+
+  // Reset container styling away from "centered placeholder"
+  calendarGridEl.className =
+    "flex-1 min-h-0 rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs sm:text-sm text-slate-100 flex flex-col";
+
+  const byDate = {};
+  bookings.forEach((b) => {
+    const key = b.date || "";
+    if (!key) return;
+    if (!byDate[key]) byDate[key] = [];
+    byDate[key].push(b);
+  });
+  Object.values(byDate).forEach((arr) => {
+    arr.sort(
+      (a, b) =>
+        (a.slotId || "").localeCompare(b.slotId || "") ||
+        (a.createdAt?.seconds || 0) - (b.createdAt?.seconds || 0)
+    );
+  });
+
+  const today = new Date();
+  let headerHtml = "";
+  let bodyHtml = "";
+
+  if (view === "day") {
+    const iso = fmtDateISO(baseDate);
+    const dayBookings = byDate[iso] || [];
+    const label = baseDate.toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "short",
+      year: "numeric"
+    });
+
+    headerHtml = `
+      <div class="px-3 sm:px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-xs text-slate-400 uppercase tracking-wide">Day view</span>
+          <span class="text-sm sm:text-base font-semibold">${label}</span>
+        </div>
+        <span class="text-[11px] text-slate-500">${dayBookings.length} bookings</span>
+      </div>
+    `;
+
+    const cardsHtml = dayBookings
+      .map((b) => {
+        const range = displayRangeForBooking(b);
+        const courtLabel = getCourtLabel(b.court || b.courtId || b.court_id || "");
+        const status = b.status || "pending";
+        const isConfirmed = status === "confirmed";
+        const isCancelled = status === "cancelled";
+        const amount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
+
+        const statusClass = isConfirmed
+          ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+          : isCancelled
+          ? "bg-rose-500/15 text-rose-300 border-rose-500/40"
+          : "bg-amber-500/15 text-amber-200 border-amber-500/40";
+
+        return `
+          <div class="rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 flex flex-col gap-1">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full border ${statusClass} text-[10px] font-medium">
+                  ${escapeHtml(status.toUpperCase())}
+                </span>
+                <span class="text-xs sm:text-sm font-medium">${escapeHtml(range || "—")}</span>
+              </div>
+              <span class="text-xs sm:text-sm font-medium">₹${amount.toLocaleString("en-IN")}</span>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-1">
+              <div class="text-[11px] sm:text-xs text-slate-300">
+                ${escapeHtml(b.userName || b.name || "Guest")}
+                ${
+                  b.phone
+                    ? `<span class="text-slate-500"> · ${escapeHtml(String(b.phone))}</span>`
+                    : ""
+                }
+              </div>
+              <div class="text-[11px] sm:text-xs text-slate-500">
+                ${escapeHtml(courtLabel)} · ${escapeHtml(b.slotId || "")}
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    bodyHtml = `
+      <div class="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 space-y-2">
+        ${
+          dayBookings.length
+            ? cardsHtml
+            : `<p class="text-xs sm:text-sm text-slate-500 text-center mt-6">No bookings for this day.</p>`
+        }
+      </div>
+    `;
+
+    calendarGridEl.innerHTML = headerHtml + bodyHtml;
+    return;
+  }
+
+  // Week / Month headers
+  const weekDaysRow = `
+    <div class="grid grid-cols-7 border-b border-slate-800 bg-slate-900/80 text-[11px] sm:text-xs">
+      ${Array.from({ length: 7 }).map((_, i) => {
+        const d = addDays(startDate, i);
+        const isToday = sameDay(d, today);
+        const shortName = d.toLocaleDateString("en-IN", { weekday: "short" });
+        const num = d.getDate();
+        return `
+          <div class="px-2 sm:px-3 py-2 border-r border-slate-800 last:border-r-0">
+            <div class="flex flex-col items-start gap-0.5">
+              <span class="uppercase tracking-wide ${isToday ? "text-emerald-300" : "text-slate-400"}">
+                ${shortName}
+              </span>
+              <span class="text-xs sm:text-sm ${isToday ? "font-semibold text-emerald-200" : "text-slate-100"}">
+                ${num}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+
+  if (view === "week") {
+    headerHtml = `
+      <div class="px-3 sm:px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-xs text-slate-400 uppercase tracking-wide">Week view</span>
+          <span class="text-xs sm:text-sm text-slate-300">
+            ${startDate.toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short"
+            })} – ${endDate.toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: startDate.getFullYear() === endDate.getFullYear() ? undefined : "numeric"
+            })}
+          </span>
+        </div>
+        <span class="text-[11px] text-slate-500">${bookings.length} bookings</span>
+      </div>
+      ${weekDaysRow}
+    `;
+
+    const colsHtml = Array.from({ length: 7 })
+      .map((_, i) => {
+        const d = addDays(startDate, i);
+        const iso = fmtDateISO(d);
+        const dayBookings = byDate[iso] || [];
+
+        const cards = dayBookings
+          .map((b) => {
+            const range = displayRangeForBooking(b);
+            const courtLabel = getCourtLabel(b.court || b.courtId || b.court_id || "");
+            const status = b.status || "pending";
+            const isConfirmed = status === "confirmed";
+            const isCancelled = status === "cancelled";
+            const amount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
+
+            const statusClass = isConfirmed
+              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/40"
+              : isCancelled
+              ? "bg-rose-500/15 text-rose-300 border-rose-500/40"
+              : "bg-amber-500/15 text-amber-200 border-amber-500/40";
+
+            return `
+              <div class="mb-1.5 rounded-md border border-slate-800 bg-slate-900/70 px-2.5 py-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[11px] font-medium">${escapeHtml(range || "—")}</span>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded-full border ${statusClass} text-[9px]">
+                    ${escapeHtml(status.toUpperCase())}
+                  </span>
+                </div>
+                <div class="mt-0.5 text-[10px] text-slate-300 truncate">
+                  ${escapeHtml(b.userName || b.name || "Guest")}
+                </div>
+                <div class="text-[10px] text-slate-500 truncate">
+                  ${escapeHtml(courtLabel)} · ₹${amount.toLocaleString("en-IN")}
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+
+        return `
+          <div class="border-r border-slate-800 last:border-r-0 overflow-y-auto p-1.5 sm:p-2">
+            ${
+              dayBookings.length
+                ? cards
+                : `<p class="text-[10px] text-slate-600 mt-4 text-center">No bookings</p>`
+            }
+          </div>
+        `;
+      })
+      .join("");
+
+    bodyHtml = `
+      <div class="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr">
+        ${colsHtml}
+      </div>
+    `;
+
+    calendarGridEl.innerHTML = headerHtml + bodyHtml;
+    return;
+  }
+
+  // Month view
+  const firstOfMonth = startOfMonth(baseDate);
+  const firstWeekStart = startOfWeek(firstOfMonth);
+  const cells = Array.from({ length: 42 }).map((_, i) => addDays(firstWeekStart, i));
+
+  headerHtml = `
+    <div class="px-3 sm:px-4 py-2 border-b border-slate-800 flex items-center justify-between">
+      <div class="flex flex-col">
+        <span class="text-xs text-slate-400 uppercase tracking-wide">Month view</span>
+        <span class="text-sm sm:text-base font-semibold">
+          ${baseDate.toLocaleDateString("en-IN", {
+            month: "long",
+            year: "numeric"
+          })}
+        </span>
+      </div>
+      <span class="text-[11px] text-slate-500">${bookings.length} bookings</span>
+    </div>
+    ${weekDaysRow}
+  `;
+
+  const bodyCells = cells
+    .map((d, idx) => {
+      const iso = fmtDateISO(d);
+      const dayBookings = byDate[iso] || [];
+      const isThisMonth = d.getMonth() === baseDate.getMonth();
+      const isToday = sameDay(d, today);
+
+      const dayLabelClasses = isThisMonth
+        ? isToday
+          ? "bg-emerald-500/20 text-emerald-100 border border-emerald-500/60"
+          : "text-slate-100"
+        : "text-slate-500";
+
+      const cards = dayBookings
+        .map((b) => {
+          const range = displayRangeForBooking(b);
+          const courtLabel = getCourtLabel(b.court || b.courtId || b.court_id || "");
+          const status = b.status || "pending";
+          const isConfirmed = status === "confirmed";
+          const isCancelled = status === "cancelled";
+
+          const statusDot = isConfirmed ? "bg-emerald-400" : isCancelled ? "bg-rose-400" : "bg-amber-300";
+
+          return `
+            <div class="flex items-center gap-1 mb-0.5">
+              <span class="inline-block h-1.5 w-1.5 rounded-full ${statusDot}"></span>
+              <span class="truncate text-[10px]">
+                ${escapeHtml(range || "—")} · ${escapeHtml(courtLabel)}
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+
+      return `
+        <div class="border-b border-r border-slate-800 last:border-r-0 p-1.5 sm:p-2 flex flex-col min-h-0">
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="inline-flex items-center justify-center h-5 w-5 rounded-md text-[10px] sm:text-xs ${dayLabelClasses}">
+              ${d.getDate()}
+            </span>
+            ${
+              dayBookings.length
+                ? `<span class="text-[10px] text-slate-500">${dayBookings.length}</span>`
+                : ""
+            }
+          </div>
+          <div class="flex-1 min-h-0 overflow-y-auto">
+            ${cards || `<p class="text-[10px] text-slate-700">—</p>`}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+
+  bodyHtml = `
+    <div class="flex-1 min-h-0 grid grid-cols-7 auto-rows-fr">
+      ${bodyCells}
+    </div>
+  `;
+
+  calendarGridEl.innerHTML = headerHtml + bodyHtml;
+}
+
+/* ---------- Calendar orchestration ---------- */
+
+async function refreshCalendarView() {
+  if (!calendarGridEl) return;
+
+  let startDate, endDate;
+
+  if (calendarView === "day") {
+    startDate = new Date(calendarBaseDate);
+    startDate.setHours(0, 0, 0, 0);
+    endDate = new Date(startDate);
+  } else if (calendarView === "week") {
+    startDate = startOfWeek(calendarBaseDate);
+    endDate = addDays(startDate, 6);
+  } else {
+    startDate = startOfMonth(calendarBaseDate);
+    endDate = endOfMonth(calendarBaseDate);
+  }
+
+  const startISO = fmtDateISO(startDate);
+  const endISO = fmtDateISO(endDate);
+  const court = calendarCourtSelect?.value || "";
+
+  const bookings = await fetchBookingsRange(startISO, endISO, court || undefined);
+  calendarBookings = bookings;
+
+  renderCalendarGrid(calendarView, calendarBaseDate, startDate, endDate, bookings);
 }
 
 /* ---------- Navigation helpers ---------- */
@@ -1137,6 +1569,11 @@ function setActiveView(view) {
       btn.classList.remove("bg-slate-800", "text-slate-50");
     }
   });
+
+  if (view === "calendar") {
+    updateCalendarViewButtons();
+    refreshCalendarView();
+  }
 }
 
 /* ---------- Event wiring ---------- */
@@ -1219,7 +1656,66 @@ function wireUI() {
       notifBadge && notifBadge.classList.add("hidden");
     });
 
-  // Default view
+  // Calendar controls
+  calendarCourtSelect &&
+    calendarCourtSelect.addEventListener("change", () => {
+      refreshCalendarView();
+    });
+
+  calendarViewDayBtn &&
+    calendarViewDayBtn.addEventListener("click", () => {
+      calendarView = "day";
+      updateCalendarViewButtons();
+      refreshCalendarView();
+    });
+  calendarViewWeekBtn &&
+    calendarViewWeekBtn.addEventListener("click", () => {
+      calendarView = "week";
+      updateCalendarViewButtons();
+      refreshCalendarView();
+    });
+  calendarViewMonthBtn &&
+    calendarViewMonthBtn.addEventListener("click", () => {
+      calendarView = "month";
+      updateCalendarViewButtons();
+      refreshCalendarView();
+    });
+
+  calendarTodayBtn &&
+    calendarTodayBtn.addEventListener("click", () => {
+      calendarBaseDate = new Date();
+      refreshCalendarView();
+    });
+
+  calendarPrevBtn &&
+    calendarPrevBtn.addEventListener("click", () => {
+      if (calendarView === "day") {
+        calendarBaseDate = addDays(calendarBaseDate, -1);
+      } else if (calendarView === "week") {
+        calendarBaseDate = addDays(calendarBaseDate, -7);
+      } else if (calendarView === "month") {
+        const d = new Date(calendarBaseDate);
+        d.setMonth(d.getMonth() - 1);
+        calendarBaseDate = d;
+      }
+      refreshCalendarView();
+    });
+
+  calendarNextBtn &&
+    calendarNextBtn.addEventListener("click", () => {
+      if (calendarView === "day") {
+        calendarBaseDate = addDays(calendarBaseDate, 1);
+      } else if (calendarView === "week") {
+        calendarBaseDate = addDays(calendarBaseDate, 7);
+      } else if (calendarView === "month") {
+        const d = new Date(calendarBaseDate);
+        d.setMonth(d.getMonth() + 1);
+        calendarBaseDate = d;
+      }
+      refreshCalendarView();
+    });
+
+  // Default view when loading page
   setActiveView("inbox");
 }
 
