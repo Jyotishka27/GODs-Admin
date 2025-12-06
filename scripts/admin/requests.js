@@ -67,28 +67,28 @@ function cacheDom() {
 function clearSelectionUI() {
   selectedId = null;
   selectedType = null;
+
   if (bookingListEl) {
     bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
       n.classList.remove(
         "bg-gray-100",
-        "dark:bg-slate-800",
         "border-l-2",
-        "border-brand",
-        "dark:border-emerald-400",
-        "bg-slate-800/80",
-        "border-emerald-400"
+        "border-emerald-500"
       );
     });
   }
+
   if (detailTitleEl) detailTitleEl.textContent = "No booking selected";
   if (detailSubtitleEl)
     detailSubtitleEl.textContent = "Pick a booking from the left to view full details, approve or cancel.";
   if (detailBodyEl) detailBodyEl.innerHTML = "";
+
   if (detailStatusPillEl) {
     detailStatusPillEl.textContent = "—";
     detailStatusPillEl.className =
-      "text-[11px] px-2 py-1 rounded-full border border-slate-700 text-slate-400";
+      "text-[11px] px-2 py-1 rounded-full border border-gray-300 text-gray-500";
   }
+
   if (detailApproveBtn) {
     detailApproveBtn.disabled = true;
     detailApproveBtn.textContent = "Confirm booking";
@@ -115,7 +115,7 @@ function renderBookingsList(bookings) {
   if (!bookings.length) {
     const empty = el(
       "div",
-      "text-xs sm:text-sm text-gray-500 dark:text-slate-500 px-3 py-4 text-center"
+      "text-xs sm:text-sm text-gray-500 px-3 py-4 text-center"
     );
     empty.textContent = "No bookings for this date.";
     bookingListEl.appendChild(empty);
@@ -133,8 +133,7 @@ function renderBookingsList(bookings) {
       [
         "w-full text-left px-3 py-2 sm:py-2.5",
         "border-b border-gray-200 hover:bg-gray-50",
-        "flex flex-col gap-1 focus:outline-none",
-        "dark:border-slate-800 dark:hover:bg-slate-800/60"
+        "flex flex-col gap-1 focus:outline-none"
       ].join(" ")
     );
     row.dataset.rowId = b._id;
@@ -145,10 +144,10 @@ function renderBookingsList(bookings) {
     const amount = Number(b.amount || b.price || getCourtAmount(b.court) || 0);
 
     const statusPillClass = isConfirmed
-      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/40"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : isCancelled
-      ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/40"
-      : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-500/40";
+      ? "bg-rose-50 text-rose-700 border-rose-200"
+      : "bg-amber-50 text-amber-700 border-amber-200";
 
     const statusLabel = isConfirmed
       ? "Confirmed"
@@ -162,24 +161,24 @@ function renderBookingsList(bookings) {
           <span class="inline-flex items-center px-2 py-0.5 rounded-full border ${statusPillClass} text-[10px] font-medium">
             ${escapeHtml(statusLabel)}
           </span>
-          <span class="text-xs sm:text-sm text-gray-900 dark:text-slate-100 font-medium">
+          <span class="text-xs sm:text-sm text-gray-900 font-medium">
             ${escapeHtml(range || "—")}
           </span>
         </div>
-        <div class="text-xs sm:text-sm text-gray-900 dark:text-slate-200 font-medium">
+        <div class="text-xs sm:text-sm text-gray-900 font-medium">
           ₹${amount.toLocaleString("en-IN")}
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-1 mt-1">
-        <div class="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300">
+        <div class="text-[11px] sm:text-xs text-gray-700">
           ${escapeHtml(b.userName || b.name || "Guest")}
           ${
             b.phone
-              ? `<span class="text-gray-400 dark:text-slate-500"> · ${escapeHtml(String(b.phone))}</span>`
+              ? `<span class="text-gray-400"> · ${escapeHtml(String(b.phone))}</span>`
               : ""
           }
         </div>
-        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
+        <div class="text-[11px] sm:text-xs text-gray-500">
           ${escapeHtml(b.date || "")} · ${escapeHtml(courtLabel)}
         </div>
       </div>
@@ -192,16 +191,12 @@ function renderBookingsList(bookings) {
       bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
         n.classList.remove(
           "bg-gray-100",
-          "dark:bg-slate-800",
           "border-l-2",
-          "border-brand",
-          "dark:border-emerald-400",
-          "bg-slate-800/80", // old classes (safe to remove too)
-          "border-emerald-400"
+          "border-emerald-500"
         );
       });
 
-      row.classList.add("bg-gray-100", "dark:bg-slate-800", "border-l-2", "border-brand", "dark:border-emerald-400");
+      row.classList.add("bg-gray-100", "border-l-2", "border-emerald-500");
 
       showBookingDetail(b);
     });
@@ -224,7 +219,7 @@ function renderWaitlistList(wls) {
   if (!wls.length) {
     const empty = el(
       "div",
-      "text-xs sm:text-sm text-gray-500 dark:text-slate-500 px-3 py-4 text-center"
+      "text-xs sm:text-sm text-gray-500 px-3 py-4 text-center"
     );
     empty.textContent = "No waitlist entries for this date.";
     bookingListEl.appendChild(empty);
@@ -238,8 +233,7 @@ function renderWaitlistList(wls) {
       [
         "w-full text-left px-3 py-2 sm:py-2.5",
         "border-b border-gray-200 hover:bg-gray-50",
-        "flex flex-col gap-1 focus:outline-none",
-        "dark:border-slate-800 dark:hover:bg-slate-800/60"
+        "flex flex-col gap-1 focus:outline-none"
       ].join(" ")
     );
     row.dataset.rowId = w._id;
@@ -251,28 +245,27 @@ function renderWaitlistList(wls) {
     row.innerHTML = `
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-medium
-                      dark:bg-slate-500/20 dark:text-slate-100 dark:border-slate-500/40">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full border bg-slate-100 text-slate-800 border-slate-200 text-[10px] font-medium">
             WAITLIST
           </span>
-          <span class="text-xs sm:text-sm text-gray-900 dark:text-slate-100 font-medium">
+          <span class="text-xs sm:text-sm text-gray-900 font-medium">
             ${escapeHtml(range || "—")}
           </span>
         </div>
-        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
+        <div class="text-[11px] sm:text-xs text-gray-500">
           ${escapeHtml(w.date || "")}
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-1 mt-1">
-        <div class="text-[11px] sm:text-xs text-gray-700 dark:text-slate-300">
+        <div class="text-[11px] sm:text-xs text-gray-700">
           ${escapeHtml(w.userName || w.name || "Guest")}
           ${
             w.phone
-              ? `<span class="text-gray-400 dark:text-slate-500"> · ${escapeHtml(String(w.phone))}</span>`
+              ? `<span class="text-gray-400"> · ${escapeHtml(String(w.phone))}</span>`
               : ""
           }
         </div>
-        <div class="text-[11px] sm:text-xs text-gray-500 dark:text-slate-500">
+        <div class="text-[11px] sm:text-xs text-gray-500">
           ${escapeHtml(courtLabel)}
         </div>
       </div>
@@ -285,16 +278,12 @@ function renderWaitlistList(wls) {
       bookingListEl.querySelectorAll("[data-row-id]").forEach((n) => {
         n.classList.remove(
           "bg-gray-100",
-          "dark:bg-slate-800",
           "border-l-2",
-          "border-brand",
-          "dark:border-emerald-400",
-          "bg-slate-800/80",
-          "border-emerald-400"
+          "border-emerald-500"
         );
       });
 
-      row.classList.add("bg-gray-100", "dark:bg-slate-800", "border-l-2", "border-brand", "dark:border-emerald-400");
+      row.classList.add("bg-gray-100", "border-l-2", "border-emerald-500");
 
       showWaitlistDetail(w);
     });
@@ -337,68 +326,66 @@ function showBookingDetail(b) {
     detailBodyEl.innerHTML = `
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[11px] sm:text-xs">
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Customer</p>
-          <p class="text-gray-900 dark:text-slate-100 font-medium">
+          <p class="text-gray-500">Customer</p>
+          <p class="text-gray-900 font-medium">
             ${escapeHtml(b.userName || b.name || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Phone</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Phone</p>
+          <p class="text-gray-900">
             ${escapeHtml(phoneStr || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Date & Time</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Date & Time</p>
+          <p class="text-gray-900">
             ${escapeHtml(b.date || "")} · ${escapeHtml(range || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Court</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Court</p>
+          <p class="text-gray-900">
             ${escapeHtml(courtLabel || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Amount</p>
-          <p class="text-gray-900 dark:text-slate-100 font-medium">
+          <p class="text-gray-500">Amount</p>
+          <p class="text-gray-900 font-medium">
             ₹${amount.toLocaleString("en-IN")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Status</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Status</p>
+          <p class="text-gray-900">
             ${escapeHtml(status)}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Created at</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Created at</p>
+          <p class="text-gray-900">
             ${escapeHtml(createdAtStr || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Slot ID</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Slot ID</p>
+          <p class="text-gray-900">
             ${escapeHtml(b.slotId || "—")}
           </p>
         </div>
       </div>
 
       <div class="mt-3">
-        <p class="text-gray-500 dark:text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
-        <p class="text-gray-800 dark:text-slate-100 text-xs sm:text-sm whitespace-pre-line">
+        <p class="text-gray-500 mb-1 text-[11px] sm:text-xs">Notes</p>
+        <p class="text-gray-800 text-xs sm:text-sm whitespace-pre-line">
           ${escapeHtml(notesStr || "No notes")}
         </p>
       </div>
 
-      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
+      <div class="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2 text-[11px] sm:text-xs">
         <button
           id="detailWhatsappBtn"
-          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100
-                 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800
-                 flex items-center gap-1"
+          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 flex items-center gap-1"
         >
           <span>WhatsApp customer</span>
         </button>
@@ -432,21 +419,14 @@ If you have any questions, reply to this message. Thank you!`;
 
   if (detailStatusPillEl) {
     let pillClass =
-      "text-[11px] px-2 py-1 rounded-full border border-gray-300 text-gray-500 " +
-      "dark:border-slate-700 dark:text-slate-400";
+      "text-[11px] px-2 py-1 rounded-full border border-gray-300 bg-amber-50 text-amber-700";
 
     if (isConfirmed) {
       pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 " +
-        "dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-300";
+        "text-[11px] px-2 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700";
     } else if (isCancelled) {
       pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-rose-300 bg-rose-50 text-rose-700 " +
-        "dark:border-rose-500/60 dark:bg-rose-500/10 dark:text-rose-300";
-    } else {
-      pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700 " +
-        "dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200";
+        "text-[11px] px-2 py-1 rounded-full border border-rose-300 bg-rose-50 text-rose-700";
     }
 
     detailStatusPillEl.className = pillClass;
@@ -519,62 +499,60 @@ function showWaitlistDetail(w) {
     detailBodyEl.innerHTML = `
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[11px] sm:text-xs">
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Customer</p>
-          <p class="text-gray-900 dark:text-slate-100 font-medium">
+          <p class="text-gray-500">Customer</p>
+          <p class="text-gray-900 font-medium">
             ${escapeHtml(w.userName || w.name || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Phone</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Phone</p>
+          <p class="text-gray-900">
             ${escapeHtml(phoneStr || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Date & Time</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Date & Time</p>
+          <p class="text-gray-900">
             ${escapeHtml(w.date || "")} · ${escapeHtml(range || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Court</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Court</p>
+          <p class="text-gray-900">
             ${escapeHtml(courtLabel || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Slot ID</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Slot ID</p>
+          <p class="text-gray-900">
             ${escapeHtml(w.slotId || "—")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Status</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Status</p>
+          <p class="text-gray-900">
             ${escapeHtml(w.status || "waitlist")}
           </p>
         </div>
         <div>
-          <p class="text-gray-500 dark:text-slate-400">Created at</p>
-          <p class="text-gray-900 dark:text-slate-100">
+          <p class="text-gray-500">Created at</p>
+          <p class="text-gray-900">
             ${escapeHtml(createdAtStr || "—")}
           </p>
         </div>
       </div>
 
       <div class="mt-3">
-        <p class="text-gray-500 dark:text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
-        <p class="text-gray-800 dark:text-slate-100 text-xs sm:text-sm whitespace-pre-line">
+        <p class="text-gray-500 mb-1 text-[11px] sm:text-xs">Notes</p>
+        <p class="text-gray-800 text-xs sm:text-sm whitespace-pre-line">
           ${escapeHtml(notesStr || "No notes")}
         </p>
       </div>
 
-      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
+      <div class="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2 text-[11px] sm:text-xs">
         <button
           id="wlWhatsappBtn"
-          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100
-                 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800
-                 flex items-center gap-1"
+          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100 flex items-center gap-1"
         >
           WhatsApp customer
         </button>
@@ -601,8 +579,7 @@ Slot: ${w.slotLabel || w.slotId || ""}`;
 
   if (detailStatusPillEl) {
     detailStatusPillEl.className =
-      "text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-slate-50 text-slate-800 " +
-      "dark:border-slate-500/60 dark:bg-slate-500/20 dark:text-slate-100";
+      "text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-slate-50 text-slate-800";
     detailStatusPillEl.textContent = "WAITLIST";
   }
 
@@ -651,7 +628,7 @@ export async function refreshCurrentView() {
       bookingListEl.innerHTML = "";
       const info = el(
         "div",
-        "text-xs sm:text-sm text-slate-400 px-3 py-4"
+        "text-xs sm:text-sm text-gray-500 px-3 py-4"
       );
       info.textContent =
         "Use the Notifications view from the left sidebar to see full notification history.";
@@ -669,22 +646,22 @@ function setInboxTab(tab) {
   currentInboxTab = tab;
   if (!tabBookingsBtn || !tabWaitlistBtn || !tabNotificationsInnerBtn) return;
 
-  tabBookingsBtn.classList.remove("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-  tabBookingsBtn.classList.add("bg-slate-800", "text-slate-200");
-  tabWaitlistBtn.classList.remove("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-  tabWaitlistBtn.classList.add("bg-slate-800", "text-slate-200");
-  tabNotificationsInnerBtn.classList.remove("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-  tabNotificationsInnerBtn.classList.add("bg-slate-800", "text-slate-200");
+  // reset all to "inactive" state
+  [tabBookingsBtn, tabWaitlistBtn, tabNotificationsInnerBtn].forEach((btn) => {
+    btn.classList.remove("bg-gray-900", "text-white", "font-medium", "shadow-sm");
+    btn.classList.add("bg-gray-100", "text-gray-800");
+  });
 
+  // active styles for current tab
   if (tab === "bookings") {
-    tabBookingsBtn.classList.add("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-    tabBookingsBtn.classList.remove("bg-slate-800", "text-slate-200");
+    tabBookingsBtn.classList.add("bg-gray-900", "text-white", "font-medium", "shadow-sm");
+    tabBookingsBtn.classList.remove("bg-gray-100", "text-gray-800");
   } else if (tab === "waitlist") {
-    tabWaitlistBtn.classList.add("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-    tabWaitlistBtn.classList.remove("bg-slate-800", "text-slate-200");
+    tabWaitlistBtn.classList.add("bg-gray-900", "text-white", "font-medium", "shadow-sm");
+    tabWaitlistBtn.classList.remove("bg-gray-100", "text-gray-800");
   } else if (tab === "notifications") {
-    tabNotificationsInnerBtn.classList.add("bg-slate-100", "text-slate-900", "font-medium", "shadow-sm");
-    tabNotificationsInnerBtn.classList.remove("bg-slate-800", "text-slate-200");
+    tabNotificationsInnerBtn.classList.add("bg-gray-900", "text-white", "font-medium", "shadow-sm");
+    tabNotificationsInnerBtn.classList.remove("bg-gray-100", "text-gray-800");
   }
 
   refreshCurrentView();
