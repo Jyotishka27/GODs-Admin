@@ -11,31 +11,35 @@
   <link rel="stylesheet" href="./styles/style.css" />
 </head>
 
-<body class="min-h-screen bg-gray-50">
+<body class="min-h-screen bg-[#f7f3f0] text-slate-900 relative overflow-hidden">
+  <!-- Decorative background blobs -->
+  <div class="pointer-events-none absolute -top-40 -left-32 w-96 h-96 rounded-full bg-gradient-to-br from-[#7f1118]/20 via-[#b91c1c]/10 to-transparent blur-3xl"></div>
+  <div class="pointer-events-none absolute -bottom-32 -right-24 w-[28rem] h-[28rem] rounded-full bg-gradient-to-tr from-emerald-500/10 via-[#7f1118]/15 to-transparent blur-3xl"></div>
+
   <!-- Main shell -->
   <div class="min-h-screen flex items-center justify-center px-4">
-    <main class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-8">
-      <!-- LEFT: Brand / logo / copy (like Facebook) -->
-      <section class="flex-1 max-w-[420px] md:self-start md:pt-24">
+    <main class="w-full max-w-6xl flex flex-col md:flex-row items-center justify-between gap-10 lg:gap-16">
+      <!-- LEFT: Brand / logo / copy -->
+      <section class="flex-1 max-w-xl md:self-start md:pt-20">
         <div class="flex items-center gap-3 mb-4">
-          <!-- Use your logo image if you prefer -->
-          <div class="w-12 h-12 rounded-2xl overflow-hidden shadow-md bg-white flex items-center justify-center">
+          <!-- Logo pill -->
+          <div class="w-14 h-14 rounded-2xl overflow-hidden shadow-lg bg-[#7f1118] flex items-center justify-center border border-white/70">
             <img src="./assets/Logo_RED.jpg" alt="GODs Turf logo" class="w-full h-full object-cover">
           </div>
           <div>
-            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-gray-900">
-              GODs TURF — Admin
+            <h1 class="text-2xl md:text-3xl font-semibold tracking-tight text-slate-900">
+              GODs TURF <span class="text-[#7f1118]">— Admin</span>
             </h1>
-            <p class="text-xs md:text-sm text-gray-500">
+            <p class="text-xs md:text-sm text-slate-600">
               Manage bookings, waitlists & analytics from one clean dashboard.
             </p>
           </div>
         </div>
 
-        <p class="text-sm md:text-base text-gray-600 leading-relaxed">
+        <p class="text-sm md:text-base text-slate-700 leading-relaxed">
           Sign in with your admin account to:
         </p>
-        <ul class="mt-3 space-y-2 text-sm text-gray-600">
+        <ul class="mt-3 space-y-2 text-sm text-slate-700">
           <li class="flex items-start gap-2">
             <span class="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
             <span>Review booking requests and approve or cancel in one click.</span>
@@ -49,95 +53,113 @@
             <span>Track revenue, peak timings and court performance.</span>
           </li>
         </ul>
+
+        <!-- Small “meta” chips to fill space -->
+        <div class="mt-6 flex flex-wrap gap-2">
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium bg-white/80 border border-slate-200 shadow-sm">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+            24 × 7 Turf
+          </span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium bg-white/80 border border-slate-200 shadow-sm">
+            🏏 Cricket &amp; ⚽ Football
+          </span>
+          <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium bg-white/80 border border-slate-200 shadow-sm">
+            🔐 Firebase Auth
+          </span>
+        </div>
       </section>
 
       <!-- RIGHT: Login card -->
       <section class="flex-1 max-w-sm w-full">
-        <div class="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 md:p-7">
-          <h2 class="text-xl md:text-2xl font-semibold text-gray-900 mb-1">
-            Welcome back, Admin
-          </h2>
-          <p class="text-sm text-gray-500 mb-4">
-            Sign in to manage bookings and waitlists.
-          </p>
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-slate-200/80">
+          <div class="px-6 py-6 md:px-7 md:py-7">
+            <h2 class="text-xl md:text-2xl font-semibold text-slate-900 mb-1">
+              Welcome back, Admin
+            </h2>
+            <p class="text-sm text-slate-500 mb-4">
+              Sign in to manage bookings and waitlists.
+            </p>
 
-          <form id="loginForm" class="flex flex-col gap-3" novalidate>
-            <div id="errorBanner"
-                 class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-2.5">
-            </div>
+            <form id="loginForm" class="flex flex-col gap-3" novalidate>
+              <div id="errorBanner"
+                   class="hidden text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5">
+              </div>
 
-            <div class="space-y-1">
-              <label for="username" class="text-xs font-medium text-gray-600">Email</label>
-              <input
-                id="username"
-                type="email"
-                placeholder="admin@yourdomain.com"
-                class="input-like w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
-                required
-              />
-            </div>
-
-            <div class="space-y-1">
-              <label for="password" class="text-xs font-medium text-gray-600">Password</label>
-              <div class="relative">
+              <div class="space-y-1">
+                <label for="username" class="text-xs font-medium text-slate-600">Email</label>
                 <input
-                  id="password"
-                  type="password"
-                  placeholder="Enter password"
-                  class="input-like w-full bg-gray-50 border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg pr-16 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  id="username"
+                  type="email"
+                  placeholder="admin@yourdomain.com"
+                  class="input-like w-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
                   required
                 />
-                <button
-                  type="button"
-                  id="togglePw"
-                  class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-500 hover:text-emerald-600"
-                >
-                  Show
-                </button>
               </div>
-            </div>
 
-            <div class="flex justify-between items-center text-xs mt-1">
-              <label class="flex items-center gap-2 text-gray-600">
-                <input
-                  id="remember"
-                  type="checkbox"
-                  class="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                <span>Remember me</span>
-              </label>
-              <a href="#" class="text-emerald-600 hover:underline font-medium">
-                Forgot password?
-              </a>
-            </div>
+              <div class="space-y-1">
+                <label for="password" class="text-xs font-medium text-slate-600">Password</label>
+                <div class="relative">
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Enter password"
+                    class="input-like w-full bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 rounded-lg pr-16 focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    id="togglePw"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-500 hover:text-emerald-600"
+                  >
+                    Show
+                  </button>
+                </div>
+              </div>
 
-            <button
-              id="loginBtn"
-              type="submit"
-              class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled
-            >
-              Login
-            </button>
+              <div class="flex justify-between items-center text-xs mt-1">
+                <label class="flex items-center gap-2 text-slate-600">
+                  <input
+                    id="remember"
+                    type="checkbox"
+                    class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>Remember me</span>
+                </label>
+                <a href="#" class="text-emerald-600 hover:underline font-medium">
+                  Forgot password?
+                </a>
+              </div>
 
-            <button
-              type="button"
-              id="demoBtn"
-              class="w-full border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium bg-gray-50 hover:bg-gray-100 transition"
-            >
-              Demo (local only)
-            </button>
+              <button
+                id="loginBtn"
+                type="submit"
+                class="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled
+              >
+                Login
+              </button>
 
-            <p class="text-[11px] text-center text-gray-500 mt-1">
-              Use your admin email to login. For local testing, click
-              <span class="font-semibold text-gray-700">Demo</span>.
+              <button
+                type="button"
+                id="demoBtn"
+                class="w-full border border-slate-200 text-slate-700 py-2.5 rounded-lg text-sm font-medium bg-slate-50 hover:bg-slate-100 transition"
+              >
+                Demo (local only)
+              </button>
+
+              <p class="text-[11px] text-center text-slate-500 mt-1">
+                Use your admin email to login. For local testing, click
+                <span class="font-semibold text-slate-700">Demo</span>.
+              </p>
+            </form>
+          </div>
+
+          <div class="border-t border-slate-100 px-6 py-3 text-center">
+            <p class="text-[11px] text-slate-400">
+              <span class="font-medium text-[#7f1118]">GODs Turf Admin</span> • Powered by Firebase Auth
             </p>
-          </form>
+          </div>
         </div>
-
-        <p class="mt-4 text-[11px] text-center text-gray-400">
-          GODs Turf Admin • Powered by Firebase Auth
-        </p>
       </section>
     </main>
   </div>
