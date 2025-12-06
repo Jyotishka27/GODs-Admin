@@ -36,9 +36,10 @@
   </style>
 </head>
 
-<body class="bg-shell text-slate-900 h-screen overflow-hidden">
+<!-- ✅ allow page to scroll; no overflow-hidden -->
+<body class="bg-shell text-slate-900 min-h-screen">
   <!-- App Shell -->
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col min-h-screen">
     <!-- Header -->
     <header class="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-slate-200 bg-white shadow-sm">
       <a class="flex items-center gap-3" href="./index.html">
@@ -214,7 +215,7 @@
           </div>
 
           <!-- VIEW: INBOX (Requests) -->
-          <section id="viewInbox" class="flex-1 min-h-0 flex flex-col gap-3">
+          <section id="viewInbox" class="flex-1 flex flex-col gap-3">
             <!-- Sub-tabs inside Inbox -->
             <div class="flex flex-wrap items-center gap-2 text-sm">
               <button
@@ -300,9 +301,9 @@
             </div>
 
             <!-- Outlook-style layout: stacked on mobile, 2-column on desktop -->
-            <div class="flex-1 min-h-0 flex flex-col sm:flex-row gap-3">
+            <div class="flex flex-col sm:flex-row gap-3">
               <!-- LEFT: list -->
-              <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col min-h-0">
+              <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col">
                 <div class="flex items-center justify-between mb-2 text-xs text-slate-500">
                   <span id="listTitle">Booking requests</span>
                   <span id="listCount" class="text-[11px] text-slate-400">0 items</span>
@@ -310,15 +311,16 @@
 
                 <div
                   id="bookingList"
-                  class="flex-1 min-h-0 overflow-y-auto rounded-xl border bg-white border-slate-200 divide-y divide-slate-100"
+                  class="rounded-xl border bg-white border-slate-200 divide-y divide-slate-100
+                         sm:flex-1 sm:min-h-0 sm:overflow-y-auto"
                 >
                   <!-- Requests JS will render rows here -->
                 </div>
               </div>
 
-              <!-- RIGHT: detail pane (visible on mobile too, stacked below list) -->
-              <div class="flex flex-1 min-h-0">
-                <div class="flex-1 rounded-xl border bg-white border-slate-200 p-4 flex flex-col gap-3 shadow-sm">
+              <!-- RIGHT: detail pane -->
+              <div class="w-full sm:flex-1">
+                <div class="rounded-xl border bg-white border-slate-200 p-4 flex flex-col gap-3 shadow-sm">
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <p class="text-xs uppercase tracking-wide text-slate-400 mb-1">Selected booking</p>
@@ -326,7 +328,7 @@
                         No booking selected
                       </h2>
                       <p id="detailSubtitle" class="text-xs text-slate-500 mt-1">
-                        Pick a booking from the left to view full details, approve or cancel.
+                        Pick a booking from the list to view full details, approve or cancel.
                       </p>
                     </div>
                     <div
@@ -339,7 +341,7 @@
 
                   <div
                     id="detailBody"
-                    class="mt-2 flex-1 text-xs sm:text-sm text-slate-800 space-y-2 overflow-y-auto"
+                    class="mt-2 text-xs sm:text-sm text-slate-800 space-y-2 sm:flex-1 sm:min-h-0 sm:overflow-y-auto"
                   >
                     <!-- Populated by Requests JS -->
                   </div>
