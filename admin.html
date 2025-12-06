@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark"> <!-- default: dark; JS will override from localStorage -->
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -630,16 +630,19 @@
   <script>
     (function () {
       const THEME_KEY = "gods_admin_theme";
+      const root = document.documentElement;
 
-      function applyTheme(theme) {
-        const root = document.documentElement;
+      const btn   = document.getElementById("themeToggle");
+      const icon  = document.getElementById("themeIcon");
+      const label = document.getElementById("themeLabel");
+
+      function setTheme(theme) {
         if (theme === "dark") {
           root.classList.add("dark");
         } else {
           root.classList.remove("dark");
         }
-        const icon = document.getElementById("themeIcon");
-        const label = document.getElementById("themeLabel");
+
         if (icon && label) {
           if (theme === "dark") {
             icon.textContent = "🌙";
@@ -649,29 +652,30 @@
             label.textContent = "Light";
           }
         }
+
+        localStorage.setItem(THEME_KEY, theme);
       }
 
-      // Initial theme (from localStorage or system)
+      // Initial theme from localStorage (or default to light)
       const stored = localStorage.getItem(THEME_KEY);
-      if (stored === "light" || stored === "dark") {
-        applyTheme(stored);
+      if (stored === "dark" || stored === "light") {
+        setTheme(stored);
       } else {
-        const prefersDark = window.matchMedia &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches;
-        applyTheme(prefersDark ? "dark" : "light");
+        // default = light (admin UI matches your booking site)
+        setTheme("light");
       }
 
-      // Toggle handler
-      const btn = document.getElementById("themeToggle");
       if (btn) {
         btn.addEventListener("click", () => {
-          const isDark = document.documentElement.classList.contains("dark");
-          const next = isDark ? "light" : "dark";
-          applyTheme(next);
-          localStorage.setItem(THEME_KEY, next);
+          const current = root.classList.contains("dark") ? "dark" : "light";
+          const next = current === "dark" ? "light" : "dark";
+          setTheme(next);
         });
       }
     })();
   </script>
+</body>
+</html>
+
 </body>
 </html>
