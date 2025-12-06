@@ -337,48 +337,68 @@ function showBookingDetail(b) {
     detailBodyEl.innerHTML = `
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[11px] sm:text-xs">
         <div>
-          <p class="text-slate-400">Customer</p>
-          <p class="text-slate-100">${escapeHtml(b.userName || b.name || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Customer</p>
+          <p class="text-gray-900 dark:text-slate-100 font-medium">
+            ${escapeHtml(b.userName || b.name || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Phone</p>
-          <p class="text-slate-100">${escapeHtml(phoneStr || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Phone</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(phoneStr || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Date & Time</p>
-          <p class="text-slate-100">${escapeHtml(b.date || "")} · ${escapeHtml(range || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Date & Time</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(b.date || "")} · ${escapeHtml(range || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Court</p>
-          <p class="text-slate-100">${escapeHtml(courtLabel || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Court</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(courtLabel || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Amount</p>
-          <p class="text-slate-100">₹${amount.toLocaleString("en-IN")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Amount</p>
+          <p class="text-gray-900 dark:text-slate-100 font-medium">
+            ₹${amount.toLocaleString("en-IN")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Status</p>
-          <p class="text-slate-100">${escapeHtml(status)}</p>
+          <p class="text-gray-500 dark:text-slate-400">Status</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(status)}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Created at</p>
-          <p class="text-slate-100">${escapeHtml(createdAtStr || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Created at</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(createdAtStr || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Slot ID</p>
-          <p class="text-slate-100">${escapeHtml(b.slotId || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Slot ID</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(b.slotId || "—")}
+          </p>
         </div>
       </div>
+
       <div class="mt-3">
-        <p class="text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
-        <p class="text-slate-100 text-xs sm:text-sm whitespace-pre-line">
+        <p class="text-gray-500 dark:text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
+        <p class="text-gray-800 dark:text-slate-100 text-xs sm:text-sm whitespace-pre-line">
           ${escapeHtml(notesStr || "No notes")}
         </p>
       </div>
-      <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
+
+      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
         <button
           id="detailWhatsappBtn"
-          class="px-2.5 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-100 flex items-center gap-1"
+          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100
+                 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800
+                 flex items-center gap-1"
         >
           <span>WhatsApp customer</span>
         </button>
@@ -412,16 +432,22 @@ If you have any questions, reply to this message. Thank you!`;
 
   if (detailStatusPillEl) {
     let pillClass =
-      "text-[11px] px-2 py-1 rounded-full border border-slate-700 text-slate-400";
-    if (isConfirmed)
+      "text-[11px] px-2 py-1 rounded-full border border-gray-300 text-gray-500 " +
+      "dark:border-slate-700 dark:text-slate-400";
+
+    if (isConfirmed) {
       pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
-    else if (isCancelled)
+        "text-[11px] px-2 py-1 rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 " +
+        "dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-300";
+    } else if (isCancelled) {
       pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-rose-500/60 bg-rose-500/10 text-rose-300";
-    else
+        "text-[11px] px-2 py-1 rounded-full border border-rose-300 bg-rose-50 text-rose-700 " +
+        "dark:border-rose-500/60 dark:bg-rose-500/10 dark:text-rose-300";
+    } else {
       pillClass =
-        "text-[11px] px-2 py-1 rounded-full border border-amber-500/60 bg-amber-500/10 text-amber-200";
+        "text-[11px] px-2 py-1 rounded-full border border-amber-300 bg-amber-50 text-amber-700 " +
+        "dark:border-amber-500/60 dark:bg-amber-500/10 dark:text-amber-200";
+    }
 
     detailStatusPillEl.className = pillClass;
     detailStatusPillEl.textContent = status.toUpperCase();
@@ -493,44 +519,62 @@ function showWaitlistDetail(w) {
     detailBodyEl.innerHTML = `
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-[11px] sm:text-xs">
         <div>
-          <p class="text-slate-400">Customer</p>
-          <p class="text-slate-100">${escapeHtml(w.userName || w.name || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Customer</p>
+          <p class="text-gray-900 dark:text-slate-100 font-medium">
+            ${escapeHtml(w.userName || w.name || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Phone</p>
-          <p class="text-slate-100">${escapeHtml(phoneStr || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Phone</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(phoneStr || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Date & Time</p>
-          <p class="text-slate-100">${escapeHtml(w.date || "")} · ${escapeHtml(range || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Date & Time</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(w.date || "")} · ${escapeHtml(range || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Court</p>
-          <p class="text-slate-100">${escapeHtml(courtLabel || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Court</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(courtLabel || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Slot ID</p>
-          <p class="text-slate-100">${escapeHtml(w.slotId || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Slot ID</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(w.slotId || "—")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Status</p>
-          <p class="text-slate-100">${escapeHtml(w.status || "waitlist")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Status</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(w.status || "waitlist")}
+          </p>
         </div>
         <div>
-          <p class="text-slate-400">Created at</p>
-          <p class="text-slate-100">${escapeHtml(createdAtStr || "—")}</p>
+          <p class="text-gray-500 dark:text-slate-400">Created at</p>
+          <p class="text-gray-900 dark:text-slate-100">
+            ${escapeHtml(createdAtStr || "—")}
+          </p>
         </div>
       </div>
+
       <div class="mt-3">
-        <p class="text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
-        <p class="text-slate-100 text-xs sm:text-sm whitespace-pre-line">
+        <p class="text-gray-500 dark:text-slate-400 mb-1 text-[11px] sm:text-xs">Notes</p>
+        <p class="text-gray-800 dark:text-slate-100 text-xs sm:text-sm whitespace-pre-line">
           ${escapeHtml(notesStr || "No notes")}
         </p>
       </div>
-      <div class="mt-3 pt-3 border-t border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
+
+      <div class="mt-3 pt-3 border-t border-gray-200 dark:border-slate-800 flex flex-wrap gap-2 text-[11px] sm:text-xs">
         <button
           id="wlWhatsappBtn"
-          class="px-2.5 py-1 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-100 flex items-center gap-1"
+          class="px-2.5 py-1 rounded-lg border border-gray-300 bg-white text-gray-800 hover:bg-gray-100
+                 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800
+                 flex items-center gap-1"
         >
           WhatsApp customer
         </button>
@@ -557,7 +601,8 @@ Slot: ${w.slotLabel || w.slotId || ""}`;
 
   if (detailStatusPillEl) {
     detailStatusPillEl.className =
-      "text-[11px] px-2 py-1 rounded-full border border-slate-500/60 bg-slate-500/20 text-slate-100";
+      "text-[11px] px-2 py-1 rounded-full border border-slate-300 bg-slate-50 text-slate-800 " +
+      "dark:border-slate-500/60 dark:bg-slate-500/20 dark:text-slate-100";
     detailStatusPillEl.textContent = "WAITLIST";
   }
 
