@@ -8,72 +8,71 @@ import { initAnalytics } from "./analytics.js";
 
 function setActiveView(view) {
   const viewTitleEl = $id("viewTitle");
-  const viewInboxEl = $id("viewInbox");
-  const viewCalendarEl = $id("viewCalendar");
-  const viewAnalyticsEl = $id("viewAnalytics");
-  const viewNotificationsEl = $id("viewNotifications");
 
-  const navInboxBtn = $id("navInbox");
-  const navCalendarBtn = $id("navCalendar");
-  const navAnalyticsBtn = $id("navAnalytics");
-  const navNotificationsBtn = $id("navNotifications");
+  const sections = {
+    inbox: $id("viewInbox"),
+    calendar: $id("viewCalendar"),
+    analytics: $id("viewAnalytics"),
+    notifications: $id("viewNotifications")
+  };
 
-  // map of views → section + nav button + title
-  const entries = [
-    ["inbox",         viewInboxEl,         navInboxBtn,         "Requests"],
-    ["calendar",      viewCalendarEl,      navCalendarBtn,      "Calendar"],
-    ["analytics",     viewAnalyticsEl,     navAnalyticsBtn,     "Analytics"],
-    ["notifications", viewNotificationsEl, navNotificationsBtn, "Notifications"]
-  ];
+  const titles = {
+    inbox: "Requests",
+    calendar: "Calendar",
+    analytics: "Analytics",
+    notifications: "Notifications"
+  };
 
-  entries.forEach(([key, el, btn, title]) => {
-    if (!el || !btn) return;
-
-    const isActive = key === view;
-
-    if (isActive) {
+  // Show/hide sections
+  Object.entries(sections).forEach(([key, el]) => {
+    if (!el) return;
+    if (key === view) {
       el.classList.remove("hidden");
-
-      // 🔹 light-theme active state
-      btn.classList.add("bg-brand-soft", "text-slate-900", "font-medium");
-      btn.classList.remove("bg-transparent", "text-slate-700");
-
-      if (viewTitleEl) viewTitleEl.textContent = title;
     } else {
       el.classList.add("hidden");
+    }
+  });
 
-      // 🔹 light-theme inactive state
+  // Update heading
+  if (viewTitleEl && titles[view]) {
+    viewTitleEl.textContent = titles[view];
+  }
+
+  // Update nav buttons (sidebar + mobile) based on data-view
+  const navButtons = document.querySelectorAll("[data-view]");
+  navButtons.forEach((btn) => {
+    const isActive = btn.dataset.view === view;
+    if (isActive) {
+      btn.classList.add("bg-brand-soft", "text-slate-900", "font-medium");
+      btn.classList.remove("bg-transparent", "text-slate-700");
+    } else {
       btn.classList.remove("bg-brand-soft", "text-slate-900", "font-medium");
       btn.classList.add("bg-transparent", "text-slate-700");
     }
   });
 
+  // Calendar needs refresh when we land on it
   if (view === "calendar") {
     showCalendar();
   }
 }
 
 function initNav() {
-  const navInboxBtn = $id("navInbox");
-  const navCalendarBtn = $id("navCalendar");
-  const navAnalyticsBtn = $id("navAnalytics");
-  const navNotificationsBtn = $id("navNotifications");
-
   const notifBell = $id("notifBell");
   const notifBadge = $id("notifBadge");
   const adminNotifs = $id("adminNotifs");
   const markAllReadBtn = $id("markAllRead");
   const clearNotifsBtn = $id("clearNotifs");
 
-  navInboxBtn && navInboxBtn.addEventListener("click", () => setActiveView("inbox"));
-  navCalendarBtn && navCalendarBtn.addEventListener("click", () => setActiveView("calendar"));
-  navAnalyticsBtn && navAnalyticsBtn.addEventListener("click", () => setActiveView("analytics"));
-  navNotificationsBtn &&
-    navNotificationsBtn.addEventListener("click", () => {
-      setActiveView("notifications");
-      if (notifBadge) notifBadge.classList.add("hidden");
-    });
+  // All nav buttons (desktop sidebar + mobile tabs)
+  const navButtons = document.querySelectorAll("[data-view]");
+  navButtons.forEach((btn) => {
+    const view = btn.dataset.view;
+    if (!view) return;
+    btn.addEventListener("click", () => setActiveView(view));
+  });
 
+  // Bell jumps to notifications
   notifBell &&
     notifBell.addEventListener("click", () => {
       setActiveView("notifications");
