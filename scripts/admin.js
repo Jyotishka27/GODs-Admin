@@ -158,7 +158,12 @@ function toast(msg, err = false) {
   if (adminNotifs) {
     const p = el("div", "text-xs sm:text-sm px-2 py-1 rounded-md border");
     p.textContent = msg;
-    p.classList.add(err ? "border-rose-700/70", "bg-rose-900/40", "text-rose-200" : "border-emerald-700/70", "bg-emerald-900/30", "text-emerald-200");
+
+    if (err) {
+      p.classList.add("border-rose-700/70", "bg-rose-900/40", "text-rose-200");
+    } else {
+      p.classList.add("border-emerald-700/70", "bg-emerald-900/30", "text-emerald-200");
+    }
 
     adminNotifs.prepend(p);
     // show badge
