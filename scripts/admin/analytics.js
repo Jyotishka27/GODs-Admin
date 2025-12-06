@@ -68,9 +68,9 @@ async function loadAnalyticsData() {
   const weekEnd = addDays(weekStart, 6);
 
   // For charts
-  const byDate = {};     // dateISO -> { revenue, count }
+  const byDate = {}; // dateISO -> { revenue, count }
   const byHour = Array.from({ length: 24 }, () => 0);
-  const byCourt = {};    // label -> count
+  const byCourt = {}; // label -> count
   const byWeekday = Array.from({ length: 7 }, () => 0); // 0=Sun..6=Sat
 
   bookings.forEach((b) => {
@@ -196,6 +196,16 @@ function ensureChartJs() {
   return true;
 }
 
+// Shared light-theme axis styling
+const lightAxisOptions = {
+  grid: {
+    color: "#e5e7eb" // gray-200
+  },
+  ticks: {
+    color: "#6b7280" // gray-500
+  }
+};
+
 function renderRevenueLine(byDate) {
   if (!ensureChartJs()) return;
 
@@ -226,24 +236,55 @@ function renderRevenueLine(byDate) {
       datasets: [
         {
           label: "Revenue (₹)",
-          data: values
+          data: values,
+          tension: 0.3
         }
       ]
     },
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
+        legend: {
+          display: false,
+          labels: {
+            color: "#4b5563" // gray-600
+          }
+        },
+        tooltip: {
+          callbacks: {
+            title: (items) => {
+              if (!items.length) return "";
+              const iso = items[0].label;
+              const d = new Date(iso);
+              if (Number.isNaN(d.getTime())) return iso;
+              return d.toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short"
+              });
+            }
+          }
+        }
       },
       scales: {
         x: {
+          ...lightAxisOptions,
           ticks: {
+            ...lightAxisOptions.ticks,
             callback: function (val, idx) {
               // Show fewer labels for readability
               if (labels.length > 15 && idx % 2 !== 0) return "";
-              return labels[idx].slice(5); // "MM-DD"
+              const iso = labels[idx];
+              const d = new Date(iso);
+              if (Number.isNaN(d.getTime())) return iso.slice(5); // Fallback "MM-DD"
+              return d.toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "short"
+              });
             }
           }
+        },
+        y: {
+          ...lightAxisOptions
         }
       }
     }
@@ -277,7 +318,20 @@ function renderHourlyOccupancy(byHour) {
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
+        legend: {
+          display: false,
+          labels: {
+            color: "#4b5563"
+          }
+        }
+      },
+      scales: {
+        x: {
+          ...lightAxisOptions
+        },
+        y: {
+          ...lightAxisOptions
+        }
       }
     }
   });
@@ -308,7 +362,16 @@ function renderCourtShare(byCourt) {
       ]
     },
     options: {
-      responsive: true
+      responsive: true,
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: "#4b5563",
+            boxWidth: 10
+          }
+        }
+      }
     }
   });
 }
@@ -321,7 +384,7 @@ function renderWeekdayDistribution(byWeekday) {
 
   destroyIfExists(weekdayChartInstance);
 
-  // 0=Sun..6=Sat -> labels as Mon..Sun or Sun..Sat
+  // 0=Sun..6=Sat
   const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
   const ctx = canvas.getContext("2d");
@@ -339,7 +402,20 @@ function renderWeekdayDistribution(byWeekday) {
     options: {
       responsive: true,
       plugins: {
-        legend: { display: false }
+        legend: {
+          display: false,
+          labels: {
+            color: "#4b5563"
+          }
+        }
+      },
+      scales: {
+        x: {
+          ...lightAxisOptions
+        },
+        y: {
+          ...lightAxisOptions
+        }
       }
     }
   });
