@@ -18,23 +18,33 @@ function setActiveView(view) {
   const navAnalyticsBtn = $id("navAnalytics");
   const navNotificationsBtn = $id("navNotifications");
 
-  const map = {
-    inbox: { el: viewInboxEl, btn: navInboxBtn, title: "Requests" },
-    calendar: { el: viewCalendarEl, btn: navCalendarBtn, title: "Calendar" },
-    analytics: { el: viewAnalyticsEl, btn: navAnalyticsBtn, title: "Analytics" },
-    notifications: { el: viewNotificationsEl, btn: navNotificationsBtn, title: "Notifications" }
-  };
+  // map of views → section + nav button + title
+  const entries = [
+    ["inbox",         viewInboxEl,         navInboxBtn,         "Requests"],
+    ["calendar",      viewCalendarEl,      navCalendarBtn,      "Calendar"],
+    ["analytics",     viewAnalyticsEl,     navAnalyticsBtn,     "Analytics"],
+    ["notifications", viewNotificationsEl, navNotificationsBtn, "Notifications"]
+  ];
 
-  Object.entries(map).forEach(([k, obj]) => {
-    const { el, btn, title } = obj;
+  entries.forEach(([key, el, btn, title]) => {
     if (!el || !btn) return;
-    if (k === view) {
+
+    const isActive = key === view;
+
+    if (isActive) {
       el.classList.remove("hidden");
-      btn.classList.add("bg-slate-800", "text-slate-50");
+
+      // 🔹 light-theme active state
+      btn.classList.add("bg-brand-soft", "text-slate-900", "font-medium");
+      btn.classList.remove("bg-transparent", "text-slate-700");
+
       if (viewTitleEl) viewTitleEl.textContent = title;
     } else {
       el.classList.add("hidden");
-      btn.classList.remove("bg-slate-800", "text-slate-50");
+
+      // 🔹 light-theme inactive state
+      btn.classList.remove("bg-brand-soft", "text-slate-900", "font-medium");
+      btn.classList.add("bg-transparent", "text-slate-700");
     }
   });
 
