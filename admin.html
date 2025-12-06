@@ -1,11 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark"> <!-- default: dark; JS will override from localStorage -->
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — GODs Turf</title>
   <link rel="icon" href="./assets/Logo_RED.jpg" type="image/jpeg"/>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#00A96E',   // light + dark primary
+              light: '#34D399',
+              dark: '#0D7F55'
+            }
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+
   <style>
     body {
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -17,48 +36,61 @@
   <!-- Charts for Analytics -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-50 h-screen overflow-hidden">
+<body class="bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-50 h-screen overflow-hidden">
   <!-- App Shell -->
   <div class="flex flex-col h-full">
     <!-- Header -->
-    <header class="flex items-center justify-between px-4 sm:px-8 py-3 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+    <header class="flex items-center justify-between px-4 sm:px-8 py-3 border-b bg-white border-gray-200 shadow-sm
+                   dark:bg-slate-950/80 dark:border-slate-800 dark:shadow-none">
       <a class="flex items-center gap-3" href="./index.html">
         <img src="./assets/Logo_RED.jpg" alt="logo" class="h-9 w-9 rounded-lg shadow-sm">
         <div class="flex flex-col">
-          <span class="text-sm font-semibold tracking-tight text-slate-100">Admin Console</span>
-          <span class="text-xs text-slate-400" id="bizName">GODs Turf</span>
+          <span class="text-sm font-semibold tracking-tight text-gray-900 dark:text-slate-100">Admin Console</span>
+          <span class="text-xs text-gray-500 dark:text-slate-400" id="bizName">GODs Turf</span>
         </div>
       </a>
 
       <div class="flex items-center gap-4">
+        <!-- Theme toggle -->
+        <button
+          id="themeToggle"
+          class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-[11px] border
+                 border-gray-300 text-gray-600 bg-gray-50 hover:bg-gray-100
+                 dark:border-slate-700 dark:text-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800"
+        >
+          <span id="themeIcon" class="text-xs">🌙</span>
+          <span id="themeLabel">Dark</span>
+        </button>
+
         <!-- Notification bell -->
         <div class="relative">
           <button
             id="notifBell"
-            class="p-2 rounded-full hover:bg-slate-800 transition flex items-center justify-center"
+            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition flex items-center justify-center"
           >
-            <svg class="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
               </path>
             </svg>
             <span
               id="notifBadge"
-              class="notification-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-rose-500 border-2 border-slate-950 rounded-full hidden">
+              class="notification-dot absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-rose-500 border-2 border-white dark:border-slate-950 rounded-full hidden">
             </span>
           </button>
         </div>
 
         <!-- Logged-in admin -->
         <div class="hidden sm:flex flex-col items-end">
-          <span id="adminEmail" class="text-xs text-slate-300"></span>
-          <span class="text-[11px] text-slate-500">Firebase Auth</span>
+          <span id="adminEmail" class="text-xs text-gray-700 dark:text-slate-300"></span>
+          <span class="text-[11px] text-gray-400 dark:text-slate-500">Firebase Auth</span>
         </div>
 
         <!-- Logout -->
         <button
           id="logoutBtn"
-          class="px-3 py-1.5 rounded-xl border border-rose-400/60 text-rose-200 text-sm hover:bg-rose-500/10 hover:border-rose-400 transition font-medium"
+          class="px-3 py-1.5 rounded-xl border border-rose-300 text-rose-600 text-sm bg-rose-50 hover:bg-rose-100
+                 dark:border-rose-400/60 dark:text-rose-200 dark:bg-transparent dark:hover:bg-rose-500/10 transition font-medium"
         >
           Logout
         </button>
@@ -68,18 +100,21 @@
     <!-- Body: Sidebar + Main -->
     <div class="flex-1 flex min-h-0">
       <!-- Sidebar -->
-      <aside class="w-56 border-r border-slate-800 bg-slate-950/90 hidden sm:flex flex-col">
+      <aside class="w-56 border-r border-gray-200 bg-white hidden sm:flex flex-col
+                     dark:border-slate-800 dark:bg-slate-950/90">
         <div class="px-4 py-3">
-          <p class="text-xs font-semibold tracking-wide text-slate-400 uppercase mb-2">Views</p>
+          <p class="text-xs font-semibold tracking-wide text-gray-500 dark:text-slate-400 uppercase mb-2">Views</p>
           <nav class="space-y-1 text-sm">
             <button
               id="navInbox"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg bg-slate-800 text-slate-50 font-medium justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg
+                     bg-gray-100 text-gray-900 font-medium justify-start
+                     dark:bg-slate-800 dark:text-slate-50"
               data-view="inbox"
             >
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-500/10">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 dark:bg-emerald-500/10">
                 <!-- Inbox icon -->
-                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-brand dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4h4m-9 0a3 3 0 003 3h4a3 3 0 003-3m-10 0V5a2 2 0 012-2h4a2 2 0 012 2v6">
                   </path>
@@ -87,18 +122,19 @@
               </span>
               <div class="flex flex-col items-start">
                 <span>Requests</span>
-                <span class="text-[11px] text-slate-400">Bookings & waitlist</span>
+                <span class="text-[11px] text-gray-500 dark:text-slate-400">Bookings & waitlist</span>
               </div>
             </button>
 
             <button
               id="navCalendar"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-gray-700 hover:bg-gray-100 justify-start
+                     dark:text-slate-300 dark:hover:bg-slate-800/80"
               data-view="calendar"
             >
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-500/10">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-sky-50 dark:bg-sky-500/10">
                 <!-- Calendar icon -->
-                <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-sky-500 dark:text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z">
                   </path>
@@ -106,18 +142,19 @@
               </span>
               <div class="flex flex-col items-start">
                 <span>Calendar</span>
-                <span class="text-[11px] text-slate-400">Teams-style schedule</span>
+                <span class="text-[11px] text-gray-500 dark:text-slate-400">Teams-style schedule</span>
               </div>
             </button>
 
             <button
               id="navAnalytics"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-gray-700 hover:bg-gray-100 justify-start
+                     dark:text-slate-300 dark:hover:bg-slate-800/80"
               data-view="analytics"
             >
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-500/10">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-amber-50 dark:bg-amber-500/10">
                 <!-- Analytics icon -->
-                <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M11 19V6m4 13V10M7 19v-4">
                   </path>
@@ -125,18 +162,19 @@
               </span>
               <div class="flex flex-col items-start">
                 <span>Analytics</span>
-                <span class="text-[11px] text-slate-400">Stats & trends</span>
+                <span class="text-[11px] text-gray-500 dark:text-slate-400">Stats & trends</span>
               </div>
             </button>
 
             <button
               id="navNotifications"
-              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-300 hover:bg-slate-800/80 justify-start"
+              class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-gray-700 hover:bg-gray-100 justify-start
+                     dark:text-slate-300 dark:hover:bg-slate-800/80"
               data-view="notifications"
             >
-              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-rose-500/10">
+              <span class="inline-flex h-7 w-7 items-center justify-center rounded-md bg-rose-50 dark:bg-rose-500/10">
                 <!-- Bell icon -->
-                <svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-rose-500 dark:text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
                   </path>
@@ -144,7 +182,7 @@
               </span>
               <div class="flex flex-col items-start">
                 <span>Notifications</span>
-                <span class="text-[11px] text-slate-400">Logs & alerts</span>
+                <span class="text-[11px] text-gray-500 dark:text-slate-400">Logs & alerts</span>
               </div>
             </button>
           </nav>
@@ -152,18 +190,20 @@
       </aside>
 
       <!-- Main Content Area -->
-      <main class="flex-1 min-w-0 bg-slate-900/60">
+      <main class="flex-1 min-w-0 bg-gray-50 dark:bg-slate-900/60">
         <div class="h-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex flex-col gap-4">
           <!-- Top bar inside main -->
           <div class="flex items-center justify-between gap-3">
             <div>
-              <h1 class="text-lg sm:text-xl font-semibold text-slate-50 flex items-center gap-2">
+              <h1 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
                 <span id="viewTitle">Requests</span>
-                <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                <span class="text-[11px] px-2 py-0.5 rounded-full border
+                             border-emerald-200 bg-emerald-50 text-brand
+                             dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
                   Admin view
                 </span>
               </h1>
-              <p class="text-xs text-slate-400 mt-1">
+              <p class="text-xs text-gray-500 dark:text-slate-400 mt-1">
                 Manage booking requests, monitor slots, view analytics, and keep track of notifications.
               </p>
             </div>
@@ -175,19 +215,22 @@
             <div class="flex flex-wrap items-center gap-2 text-sm">
               <button
                 id="tabBookings"
-                class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-900 font-medium shadow-sm"
+                class="px-3 py-1.5 rounded-full bg-gray-900 text-white font-medium shadow-sm
+                       dark:bg-slate-100 dark:text-slate-900"
               >
                 Bookings
               </button>
               <button
                 id="tabWaitlist"
-                class="px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 hover:bg-slate-700"
+                class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200
+                       dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Waitlist
               </button>
               <button
                 id="tabNotificationsInner"
-                class="px-3 py-1.5 rounded-full bg-slate-800 text-slate-200 hover:bg-slate-700"
+                class="px-3 py-1.5 rounded-full bg-gray-100 text-gray-800 hover:bg-gray-200
+                       dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
               >
                 Notifications
               </button>
@@ -196,29 +239,35 @@
             <!-- Filters + Actions -->
             <div id="controls" class="flex flex-wrap items-end gap-3 text-xs sm:text-sm">
               <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-medium text-slate-400">Date</label>
+                <label class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Date</label>
                 <input
                   id="filterDate"
                   type="date"
-                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  class="border border-gray-300 bg-white rounded-lg px-3 py-1.5 text-gray-900 text-sm
+                         focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand
+                         dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
                 />
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-medium text-slate-400">Court</label>
+                <label class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Court</label>
                 <select
                   id="filterCourt"
-                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  class="border border-gray-300 bg-white rounded-lg px-3 py-1.5 text-gray-900 text-sm
+                         focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand
+                         dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
                 >
                   <option value="">All courts</option>
                 </select>
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-medium text-slate-400">Status</label>
+                <label class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Status</label>
                 <select
                   id="filterStatus"
-                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                  class="border border-gray-300 bg-white rounded-lg px-3 py-1.5 text-gray-900 text-sm
+                         focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand
+                         dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
                 >
                   <option value="">All</option>
                   <option value="pending">Pending</option>
@@ -232,19 +281,21 @@
               <div class="flex flex-wrap gap-2">
                 <button
                   id="exportCsv"
-                  class="px-3 py-1.5 rounded-lg bg-emerald-600 text-slate-50 text-xs sm:text-sm hover:bg-emerald-500 font-medium"
+                  class="px-3 py-1.5 rounded-lg bg-brand text-white text-xs sm:text-sm hover:bg-brand-dark font-medium shadow-sm"
                 >
                   Export CSV
                 </button>
                 <button
                   id="clearAll"
-                  class="px-3 py-1.5 rounded-lg border border-rose-500/60 text-rose-200 text-xs sm:text-sm hover:bg-rose-500/10"
+                  class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 text-xs sm:text-sm bg-rose-50 hover:bg-rose-100
+                         dark:border-rose-500/60 dark:text-rose-200 dark:bg-transparent dark:hover:bg-rose-500/10"
                 >
                   Delete All Bookings
                 </button>
                 <button
                   id="refreshBtn"
-                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs sm:text-sm hover:bg-slate-800/80"
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-800 text-xs sm:text-sm bg-white hover:bg-gray-100
+                         dark:border-slate-700 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800/80"
                 >
                   Refresh
                 </button>
@@ -253,16 +304,17 @@
 
             <!-- Outlook-style 2-column layout -->
             <div class="flex-1 min-h-0 flex gap-3">
-              <!-- LEFT: list of bookings / waitlist / notifications -->
+              <!-- LEFT: list -->
               <div class="w-full sm:w-1/2 lg:w-2/5 flex flex-col min-h-0">
-                <div class="flex items-center justify-between mb-2 text-xs text-slate-400">
+                <div class="flex items-center justify-between mb-2 text-xs text-gray-500 dark:text-slate-400">
                   <span id="listTitle">Booking requests</span>
-                  <span id="listCount" class="text-[11px] text-slate-500">0 items</span>
+                  <span id="listCount" class="text-[11px] text-gray-400 dark:text-slate-500">0 items</span>
                 </div>
 
                 <div
                   id="bookingList"
-                  class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 divide-y divide-slate-800"
+                  class="flex-1 min-h-0 overflow-y-auto rounded-xl border bg-white border-gray-200 divide-y divide-gray-200
+                         dark:border-slate-800 dark:bg-slate-950/60 dark:divide-slate-800"
                 >
                   <!-- Requests JS will render rows here -->
                 </div>
@@ -270,40 +322,45 @@
 
               <!-- RIGHT: detail pane -->
               <div class="hidden sm:flex flex-1 min-h-0">
-                <div class="flex-1 rounded-xl border border-slate-800 bg-slate-950/60 p-4 flex flex-col gap-3">
+                <div class="flex-1 rounded-xl border bg-white border-gray-200 p-4 flex flex-col gap-3 shadow-sm
+                            dark:bg-slate-950/60 dark:border-slate-800 dark:shadow-none">
                   <div class="flex items-start justify-between gap-3">
                     <div>
-                      <p class="text-xs uppercase tracking-wide text-slate-500 mb-1">Selected booking</p>
-                      <h2 id="detailTitle" class="text-sm sm:text-base font-semibold text-slate-50">
+                      <p class="text-xs uppercase tracking-wide text-gray-400 dark:text-slate-500 mb-1">Selected booking</p>
+                      <h2 id="detailTitle" class="text-sm sm:text-base font-semibold text-gray-900 dark:text-slate-50">
                         No booking selected
                       </h2>
-                      <p id="detailSubtitle" class="text-xs text-slate-400 mt-1">
+                      <p id="detailSubtitle" class="text-xs text-gray-500 dark:text-slate-400 mt-1">
                         Pick a booking from the left to view full details, approve or cancel.
                       </p>
                     </div>
-                    <div id="detailStatusPill" class="text-[11px] px-2 py-1 rounded-full border border-slate-700 text-slate-400">
+                    <div id="detailStatusPill"
+                         class="text-[11px] px-2 py-1 rounded-full border border-gray-300 text-gray-500
+                                dark:border-slate-700 dark:text-slate-400">
                       —
                     </div>
                   </div>
 
                   <div
                     id="detailBody"
-                    class="mt-2 flex-1 text-xs sm:text-sm text-slate-200 space-y-2 overflow-y-auto"
+                    class="mt-2 flex-1 text-xs sm:text-sm text-gray-800 dark:text-slate-200 space-y-2 overflow-y-auto"
                   >
                     <!-- Populated by Requests JS -->
                   </div>
 
-                  <div class="pt-3 mt-2 border-t border-slate-800 flex flex-wrap gap-2">
+                  <div class="pt-3 mt-2 border-t border-gray-200 dark:border-slate-800 flex flex-wrap gap-2">
                     <button
                       id="detailApprove"
-                      class="px-3 py-1.5 rounded-lg bg-emerald-600 text-xs sm:text-sm text-slate-50 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="px-3 py-1.5 rounded-lg bg-brand text-xs sm:text-sm text-white hover:bg-brand-dark shadow-sm
+                             disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled
                     >
                       Confirm booking
                     </button>
                     <button
                       id="detailCancel"
-                      class="px-3 py-1.5 rounded-lg bg-rose-600 text-xs sm:text-sm text-slate-50 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                      class="px-3 py-1.5 rounded-lg bg-rose-600 text-xs sm:text-sm text-white hover:bg-rose-500
+                             disabled:opacity-40 disabled:cursor-not-allowed"
                       disabled
                     >
                       Cancel booking
@@ -313,7 +370,7 @@
               </div>
             </div>
 
-            <p class="text-[11px] text-slate-500 mt-2">
+            <p class="text-[11px] text-gray-400 dark:text-slate-500 mt-2">
               * Demo admin uses Firebase Auth + Firestore. Wire backend rules for production.
             </p>
           </section>
@@ -322,33 +379,39 @@
           <section id="viewCalendar" class="flex-1 min-h-0 hidden flex-col gap-3">
             <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
               <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-medium text-slate-400">Court</label>
+                <label class="text-[11px] font-medium text-gray-500 dark:text-slate-400">Court</label>
                 <select
                   id="calendarCourt"
-                  class="border border-slate-700 bg-slate-900/80 rounded-lg px-3 py-1.5 text-slate-100 text-sm focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
+                  class="border border-gray-300 bg-white rounded-lg px-3 py-1.5 text-gray-900 text-sm
+                         focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500
+                         dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100"
                 >
                   <option value="">All courts</option>
                 </select>
               </div>
 
               <div class="flex flex-col gap-1">
-                <label class="text-[11px] font-medium text-slate-400">View</label>
-                <div class="inline-flex rounded-lg border border-slate-700 bg-slate-900/80 overflow-hidden">
+                <label class="text-[11px] font-medium text-gray-500 dark:text-slate-400">View</label>
+                <div class="inline-flex rounded-lg border border-gray-300 bg-white overflow-hidden
+                            dark:border-slate-700 dark:bg-slate-900/80">
                   <button
                     id="calendarViewDay"
-                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-100 bg-slate-800"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-gray-900 bg-gray-100
+                           dark:text-slate-100 dark:bg-slate-800"
                   >
                     Day
                   </button>
                   <button
                     id="calendarViewWeek"
-                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-300 hover:bg-slate-800"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-gray-600 hover:bg-gray-100
+                           dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Week
                   </button>
                   <button
                     id="calendarViewMonth"
-                    class="px-3 py-1.5 text-xs sm:text-sm text-slate-300 hover:bg-slate-800"
+                    class="px-3 py-1.5 text-xs sm:text-sm text-gray-600 hover:bg-gray-100
+                           dark:text-slate-300 dark:hover:bg-slate-800"
                   >
                     Month
                   </button>
@@ -360,19 +423,22 @@
               <div class="flex items-center gap-2">
                 <button
                   id="calendarPrev"
-                  class="px-2 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs hover:bg-slate-800"
+                  class="px-2 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs bg-white hover:bg-gray-100
+                         dark:border-slate-700 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800"
                 >
                   ‹
                 </button>
                 <button
                   id="calendarToday"
-                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs sm:text-sm hover:bg-slate-800"
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-800 text-xs sm:text-sm bg-white hover:bg-gray-100
+                         dark:border-slate-700 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800"
                 >
                   Today
                 </button>
                 <button
                   id="calendarNext"
-                  class="px-2 py-1.5 rounded-lg border border-slate-700 text-slate-100 text-xs hover:bg-slate-800"
+                  class="px-2 py-1.5 rounded-lg border border-gray-300 text-gray-700 text-xs bg-white hover:bg-gray-100
+                         dark:border-slate-700 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800"
                 >
                   ›
                 </button>
@@ -381,9 +447,10 @@
 
             <div
               id="calendarGrid"
-              class="flex-1 min-h-0 rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs sm:text-sm text-slate-100 flex items-center justify-center"
+              class="flex-1 min-h-0 rounded-xl border bg-white border-gray-200 overflow-hidden text-xs sm:text-sm text-gray-900 flex items-center justify-center
+                     dark:bg-slate-950/60 dark:border-slate-800 dark:text-slate-100"
             >
-              <p class="text-slate-500 text-xs sm:text-sm px-4 text-center">
+              <p class="text-gray-500 dark:text-slate-500 text-xs sm:text-sm px-4 text-center">
                 Calendar view placeholder. The calendar JS will render booked slots here in a Teams-style layout.
               </p>
             </div>
@@ -393,79 +460,87 @@
           <section id="viewAnalytics" class="flex-1 min-h-0 hidden flex-col gap-4">
             <!-- Summary cards -->
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-[11px] font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                   Total bookings (last 90 days)
                 </p>
-                <p id="analyticsTotalBookings" class="mt-2 text-xl font-semibold text-slate-50">
+                <p id="analyticsTotalBookings" class="mt-2 text-xl font-semibold text-gray-900 dark:text-slate-50">
                   0
                 </p>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-[11px] font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                   Total revenue (last 90 days)
                 </p>
-                <p id="analyticsTotalRevenue" class="mt-2 text-xl font-semibold text-emerald-300">
+                <p id="analyticsTotalRevenue" class="mt-2 text-xl font-semibold text-brand dark:text-emerald-300">
                   ₹0
                 </p>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-[11px] font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                   This month
                 </p>
-                <p class="mt-2 text-sm text-slate-200">
+                <p class="mt-2 text-sm text-gray-800 dark:text-slate-200">
                   <span id="analyticsMonthBookings" class="font-semibold">0</span>
-                  <span class="text-slate-400"> bookings · </span>
-                  <span id="analyticsMonthRevenue" class="font-semibold text-emerald-300">₹0</span>
+                  <span class="text-gray-500 dark:text-slate-400"> bookings · </span>
+                  <span id="analyticsMonthRevenue" class="font-semibold text-brand dark:text-emerald-300">₹0</span>
                 </p>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-[11px] font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wide">
                   This week (Mon–Sun)
                 </p>
-                <p class="mt-2 text-sm text-slate-200">
+                <p class="mt-2 text-sm text-gray-800 dark:text-slate-200">
                   <span id="analyticsWeekBookings" class="font-semibold">0</span>
-                  <span class="text-slate-400"> bookings · </span>
-                  <span id="analyticsWeekRevenue" class="font-semibold text-emerald-300">₹0</span>
+                  <span class="text-gray-500 dark:text-slate-400"> bookings · </span>
+                  <span id="analyticsWeekRevenue" class="font-semibold text-brand dark:text-emerald-300">₹0</span>
                 </p>
               </div>
             </div>
 
             <!-- Charts -->
             <div class="grid gap-4 lg:grid-cols-2">
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-xs text-slate-400 mb-2">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">
                   Revenue — last 30 days
                 </p>
                 <canvas id="revChart" height="120"></canvas>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-xs text-slate-400 mb-2">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">
                   Bookings by hour of day
                 </p>
                 <canvas id="occChart" height="120"></canvas>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-xs text-slate-400 mb-2">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">
                   Bookings by court
                 </p>
                 <canvas id="courtChart" height="120"></canvas>
               </div>
 
-              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
-                <p class="text-xs text-slate-400 mb-2">
+              <div class="p-3 rounded-xl bg-white border border-gray-200 shadow-sm
+                          dark:bg-slate-950/70 dark:border-slate-800 dark:shadow-none">
+                <p class="text-xs text-gray-500 dark:text-slate-400 mb-2">
                   Bookings by weekday
                 </p>
                 <canvas id="weekdayChart" height="120"></canvas>
               </div>
             </div>
 
-            <p class="text-[11px] text-slate-500">
+            <p class="text-[11px] text-gray-400 dark:text-slate-500">
               Analytics are computed from Firestore bookings for approximately the last 90 days.
             </p>
           </section>
@@ -473,17 +548,19 @@
           <!-- VIEW: NOTIFICATIONS (global log) -->
           <section id="viewNotifications" class="flex-1 min-h-0 hidden flex-col gap-3">
             <div class="flex items-center justify-between mb-1">
-              <h2 class="text-sm sm:text-base font-semibold text-slate-50">Notifications</h2>
+              <h2 class="text-sm sm:text-base font-semibold text-gray-900 dark:text-slate-50">Notifications</h2>
               <div class="flex gap-2 text-xs sm:text-sm">
                 <button
                   id="markAllRead"
-                  class="px-3 py-1.5 rounded-lg border border-slate-700 text-slate-100 hover:bg-slate-800"
+                  class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-800 bg-white hover:bg-gray-100
+                         dark:border-slate-700 dark:text-slate-100 dark:bg-transparent dark:hover:bg-slate-800"
                 >
                   Mark all read
                 </button>
                 <button
                   id="clearNotifs"
-                  class="px-3 py-1.5 rounded-lg border border-rose-500/60 text-rose-200 hover:bg-rose-500/10"
+                  class="px-3 py-1.5 rounded-lg border border-rose-300 text-rose-600 bg-rose-50 hover:bg-rose-100
+                         dark:border-rose-500/60 dark:text-rose-200 dark:bg-transparent dark:hover:bg-rose-500/10"
                 >
                   Clear all
                 </button>
@@ -492,7 +569,8 @@
 
             <div
               id="adminNotifs"
-              class="flex-1 min-h-0 max-h-full overflow-y-auto border border-slate-800 rounded-xl bg-slate-950/60 space-y-2 p-4"
+              class="flex-1 min-h-0 max-h-full overflow-y-auto border border-gray-200 rounded-xl bg-white space-y-2 p-4
+                     dark:border-slate-800 dark:bg-slate-950/60"
             >
               <!-- Notifications will be populated here -->
             </div>
@@ -543,6 +621,54 @@
         alert("Logout failed. Please try again.");
       }
     });
+  </script>
+
+  <!-- Theme toggle logic -->
+  <script>
+    (function () {
+      const THEME_KEY = "gods_admin_theme";
+
+      function applyTheme(theme) {
+        const root = document.documentElement;
+        if (theme === "dark") {
+          root.classList.add("dark");
+        } else {
+          root.classList.remove("dark");
+        }
+        const icon = document.getElementById("themeIcon");
+        const label = document.getElementById("themeLabel");
+        if (icon && label) {
+          if (theme === "dark") {
+            icon.textContent = "🌙";
+            label.textContent = "Dark";
+          } else {
+            icon.textContent = "☀";
+            label.textContent = "Light";
+          }
+        }
+      }
+
+      // Initial theme (from localStorage or system)
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored === "light" || stored === "dark") {
+        applyTheme(stored);
+      } else {
+        const prefersDark = window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        applyTheme(prefersDark ? "dark" : "light");
+      }
+
+      // Toggle handler
+      const btn = document.getElementById("themeToggle");
+      if (btn) {
+        btn.addEventListener("click", () => {
+          const isDark = document.documentElement.classList.contains("dark");
+          const next = isDark ? "light" : "dark";
+          applyTheme(next);
+          localStorage.setItem(THEME_KEY, next);
+        });
+      }
+    })();
   </script>
 </body>
 </html>
