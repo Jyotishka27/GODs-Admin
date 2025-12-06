@@ -4,6 +4,7 @@
 import { $id, loadSiteCfg, toast } from "./shared.js";
 import { initRequests } from "./requests.js";
 import { initCalendar, showCalendar } from "./calendar.js";
+import { initAnalytics } from "./analytics.js";
 
 function setActiveView(view) {
   const viewTitleEl = $id("viewTitle");
@@ -91,6 +92,7 @@ async function boot() {
   await loadSiteCfg();
   initRequests();
   initCalendar();
+  initAnalytics();
   initNav();
   setActiveView("inbox");
   toast("Admin panel loaded");
