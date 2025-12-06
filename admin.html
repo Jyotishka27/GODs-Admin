@@ -4,26 +4,31 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — GODs Turf</title>
-  <link rel="icon" href="./assets/Logo_RED.jpg" type="image/jpeg"/>
+  <link rel="icon" href="./assets/Logo_RED.jpg" type="image/svg+xml"/>
 
-  <!-- Tailwind -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind config BEFORE the CDN script -->
   <script>
+    tailwind = window.tailwind || {};
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
             brand: {
-              DEFAULT: '#00A96E',   // light + dark primary
-              light: '#34D399',
-              dark: '#0D7F55'
+              DEFAULT: '#16a34a',   // green like booking CTA
+              dark: '#15803d'
+            },
+            gods: {
+              red: '#7f1118',   // from logo
+              redDeep: '#5d0810',
+              bgLight: '#f7f3f0'
             }
           }
         }
-      },
-      darkMode: 'class'
-    }
+      }
+    };
   </script>
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     body {
@@ -32,18 +37,16 @@
     .notification-dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
   </style>
-
-  <!-- Charts for Analytics -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 dark:bg-slate-950 dark:text-slate-50 h-screen overflow-hidden">
+  
+<body class="bg-gods-bgLight text-slate-900 dark:bg-slate-950 dark:text-slate-50 h-screen overflow-hidden">
   <!-- App Shell -->
   <div class="flex flex-col h-full">
     <!-- Header -->
     <header class="flex items-center justify-between px-4 sm:px-8 py-3 border-b bg-white border-gray-200 shadow-sm
                    dark:bg-slate-950/80 dark:border-slate-800 dark:shadow-none">
       <a class="flex items-center gap-3" href="./index.html">
-        <img src="./assets/Logo_RED.jpg" alt="logo" class="h-9 w-9 rounded-lg shadow-sm">
+        <img src="./assets/Logo_RED.jpg" alt="logo" class="h-9 w-9 rounded-lg shadow-sm border border-white/70 bg-gods-red">
         <div class="flex flex-col">
           <span class="text-sm font-semibold tracking-tight text-gray-900 dark:text-slate-100">Admin Console</span>
           <span class="text-xs text-gray-500 dark:text-slate-400" id="bizName">GODs Turf</span>
