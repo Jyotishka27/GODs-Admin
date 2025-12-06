@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Admin — GODs Turf</title>
-  <link rel="icon" href="./assets/Logo_RED.jpg" type="image/svg+xml"/>
+  <link rel="icon" href="./assets/Logo_RED.jpg" type="image/jpeg"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
@@ -13,6 +13,9 @@
     .notification-dot { animation: pulse 2s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
   </style>
+
+  <!-- Charts for Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-50 h-screen overflow-hidden">
   <!-- App Shell -->
@@ -122,7 +125,7 @@
               </span>
               <div class="flex flex-col items-start">
                 <span>Analytics</span>
-                <span class="text-[11px] text-slate-400">Coming soon</span>
+                <span class="text-[11px] text-slate-400">Stats & trends</span>
               </div>
             </button>
 
@@ -161,7 +164,7 @@
                 </span>
               </h1>
               <p class="text-xs text-slate-400 mt-1">
-                Manage booking requests, monitor slots, and keep track of notifications.
+                Manage booking requests, monitor slots, view analytics, and keep track of notifications.
               </p>
             </div>
           </div>
@@ -261,7 +264,7 @@
                   id="bookingList"
                   class="flex-1 min-h-0 overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/60 divide-y divide-slate-800"
                 >
-                  <!-- admin.js will render rows here as cards -->
+                  <!-- Requests JS will render rows here -->
                 </div>
               </div>
 
@@ -287,7 +290,7 @@
                     id="detailBody"
                     class="mt-2 flex-1 text-xs sm:text-sm text-slate-200 space-y-2 overflow-y-auto"
                   >
-                    <!-- Populated by admin.js -->
+                    <!-- Populated by Requests JS -->
                   </div>
 
                   <div class="pt-3 mt-2 border-t border-slate-800 flex flex-wrap gap-2">
@@ -315,7 +318,7 @@
             </p>
           </section>
 
-          <!-- VIEW: CALENDAR (Teams-style placeholder) -->
+          <!-- VIEW: CALENDAR (Teams-style) -->
           <section id="viewCalendar" class="flex-1 min-h-0 hidden flex-col gap-3">
             <div class="flex flex-wrap items-center gap-3 text-xs sm:text-sm">
               <div class="flex flex-col gap-1">
@@ -381,21 +384,90 @@
               class="flex-1 min-h-0 rounded-xl border border-slate-800 bg-slate-950/60 overflow-hidden text-xs sm:text-sm text-slate-100 flex items-center justify-center"
             >
               <p class="text-slate-500 text-xs sm:text-sm px-4 text-center">
-                Calendar view placeholder. We’ll hook this to a Teams-style calendar (e.g. FullCalendar)
-                in <code>admin.js</code> and render booked slots as meeting-style blocks.
+                Calendar view placeholder. The calendar JS will render booked slots here in a Teams-style layout.
               </p>
             </div>
           </section>
 
-          <!-- VIEW: ANALYTICS (placeholder) -->
+          <!-- VIEW: ANALYTICS -->
           <section id="viewAnalytics" class="flex-1 min-h-0 hidden flex-col gap-4">
-            <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4 sm:p-5">
-              <h2 class="text-sm sm:text-base font-semibold text-slate-50 mb-1">Analytics (coming soon)</h2>
-              <p class="text-xs sm:text-sm text-slate-400">
-                This space will show court utilization, peak hours, daily/weekly revenue, and repeat customers once
-                we wire metrics from Firestore.
-              </p>
+            <!-- Summary cards -->
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                  Total bookings (last 90 days)
+                </p>
+                <p id="analyticsTotalBookings" class="mt-2 text-xl font-semibold text-slate-50">
+                  0
+                </p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                  Total revenue (last 90 days)
+                </p>
+                <p id="analyticsTotalRevenue" class="mt-2 text-xl font-semibold text-emerald-300">
+                  ₹0
+                </p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                  This month
+                </p>
+                <p class="mt-2 text-sm text-slate-200">
+                  <span id="analyticsMonthBookings" class="font-semibold">0</span>
+                  <span class="text-slate-400"> bookings · </span>
+                  <span id="analyticsMonthRevenue" class="font-semibold text-emerald-300">₹0</span>
+                </p>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-[11px] font-medium text-slate-400 uppercase tracking-wide">
+                  This week (Mon–Sun)
+                </p>
+                <p class="mt-2 text-sm text-slate-200">
+                  <span id="analyticsWeekBookings" class="font-semibold">0</span>
+                  <span class="text-slate-400"> bookings · </span>
+                  <span id="analyticsWeekRevenue" class="font-semibold text-emerald-300">₹0</span>
+                </p>
+              </div>
             </div>
+
+            <!-- Charts -->
+            <div class="grid gap-4 lg:grid-cols-2">
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-xs text-slate-400 mb-2">
+                  Revenue — last 30 days
+                </p>
+                <canvas id="revChart" height="120"></canvas>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-xs text-slate-400 mb-2">
+                  Bookings by hour of day
+                </p>
+                <canvas id="occChart" height="120"></canvas>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-xs text-slate-400 mb-2">
+                  Bookings by court
+                </p>
+                <canvas id="courtChart" height="120"></canvas>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800">
+                <p class="text-xs text-slate-400 mb-2">
+                  Bookings by weekday
+                </p>
+                <canvas id="weekdayChart" height="120"></canvas>
+              </div>
+            </div>
+
+            <p class="text-[11px] text-slate-500">
+              Analytics are computed from Firestore bookings for approximately the last 90 days.
+            </p>
           </section>
 
           <!-- VIEW: NOTIFICATIONS (global log) -->
