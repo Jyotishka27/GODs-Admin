@@ -27,6 +27,7 @@
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     body {
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -508,6 +509,42 @@
               </div>
             </div>
 
+            <!-- Data Management (Excel Import / Export) -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h3 class="text-sm font-semibold text-slate-900">Data Management</h3>
+                  <p class="text-[11px] text-slate-500">
+                    Backup or restore bookings data using Excel files.
+                  </p>
+                </div>
+              
+                <div class="flex flex-wrap gap-2">
+                  <!-- Download Excel -->
+                  <button
+                    id="downloadExcelBtn"
+                    class="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs sm:text-sm hover:bg-blue-700 font-medium shadow-sm"
+                  >
+                    Download Excel
+                  </button>
+              
+                  <!-- Hidden file input -->
+                  <input
+                    type="file"
+                    id="uploadExcelInput"
+                    accept=".xlsx,.xls"
+                    class="hidden"
+                  />
+              
+                  <!-- Upload Excel -->
+                  <button
+                    id="uploadExcelBtn"
+                    class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs sm:text-sm hover:bg-emerald-700 font-medium shadow-sm"
+                  >
+                    Upload Excel
+                  </button>
+                </div>
+              </div>
+            
             <!-- Charts -->
             <div class="grid gap-4 lg:grid-cols-2">
               <!-- Revenue trend -->
