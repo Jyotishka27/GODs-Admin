@@ -437,7 +437,17 @@ export async function refreshAnalytics() {
   }
 }
 
+import { exportBookingsExcel } from "./shared.js";
+
 export async function initAnalytics() {
-  // Currently, just a refresh. Later we can add filters if needed.
   await refreshAnalytics();
+
+  const downloadBtn = document.getElementById("downloadExcelBtn");
+
+  if (downloadBtn) {
+    downloadBtn.addEventListener("click", () => {
+      exportBookingsExcel();
+    });
+  }
 }
+
