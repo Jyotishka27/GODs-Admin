@@ -634,3 +634,51 @@ export async function deleteWishlist(id) {
     toast("Delete waitlist failed", true);
   }
 }
+
+/* ---------- Excel Export ---------- */
+
+export async function exportBookingsExcel(date) {
+  try {
+    if (typeof XLSX === "undefined") {
+      toast("Excel library not loaded", true);
+      return;
+    }
+
+    let qRef = collection(db, "bookings");
+    if (date) {
+      qRef = query(collection(db, "bookings"), where("date", "==", date));
+    }
+
+    const snap = await getDocs(qRef);
+
+    const rows = [];
+    snap.forEach((d) => {
+      const data = d.data();
+      rows.push({
+        id: d.id,
+        status: data.status || "",
+        court: getCourtLabel(data.court || ""),
+        date: data.date || "",
+        timeRange: displayRangeForBooking(data),
+        startISO: data.startISO || "",
+        endISO: data.endISO || "",
+        name: data.userName || data.name || "",
+        phone: data.phone || "",
+        amount: data.amount || data.price || "",
+        notes: data.notes || ""
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Bookings");
+
+    XLSX.writeFile(workbook, `bookings-${date || "all"}.xlsx`);
+
+    toast("Excel exported successfully");
+  } catch (err) {
+    console.error("Excel export failed", err);
+    toast("Excel export failed", true);
+  }
+}
+
